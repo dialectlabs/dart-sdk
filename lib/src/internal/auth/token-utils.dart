@@ -20,7 +20,7 @@ class AuthTokensImpl implements AuthTokens {
     final base64Header = headerStr.btoa();
     final nowUtcSeconds = DateTime.now().millisecondsSinceEpoch / 1000;
     final body = TokenBody(
-        sub: signer.subject.publicKey.toBase58(),
+        sub: signer.subject.toBase58(),
         iat: nowUtcSeconds.round(),
         exp: (nowUtcSeconds + ttl.inMilliseconds / 1000).round());
     final bodyStr = JsonEncoder().convert(body);
@@ -104,19 +104,19 @@ class AuthTokensImpl implements AuthTokens {
 }
 
 class DialectWalletAdapterEd25519TokenSigner implements Ed25519TokenSigner {
-  Ed25519HDKeyPair _subject;
+  Ed25519HDPublicKey _subject;
   final DialectWalletAdapter dialectWalletAdapter;
 
   DialectWalletAdapterEd25519TokenSigner({required this.dialectWalletAdapter})
       : _subject = dialectWalletAdapter.publicKey;
 
   @override
-  Ed25519HDKeyPair get subject {
+  Ed25519HDPublicKey get subject {
     return _subject;
   }
 
   @override
-  set subject(Ed25519HDKeyPair _subj) {
+  set subject(Ed25519HDPublicKey _subj) {
     _subject = _subj;
   }
 

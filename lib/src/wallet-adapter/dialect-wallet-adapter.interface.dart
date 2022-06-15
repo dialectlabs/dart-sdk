@@ -1,10 +1,11 @@
 import 'dart:typed_data';
 
 import 'package:dialect_sdk/src/dialect_sdk_base.dart';
+import 'package:dialect_sdk/src/internal/encryption/encryption-keys-provider.dart';
 import 'package:solana/solana.dart';
 
 typedef MessageEncryptionWalletAdapterPropsDiffieHellman
-    = Future<DiffieHellmanResult> Function(Uint8List)?;
+    = Future<DiffieHellmanKeys> Function()?;
 typedef MessageSignerWalletAdapterPropsSignMessage = Future<Uint8List> Function(
     Uint8List)?;
 typedef SignerWalletAdapterPropsSignAllTransactions = Future<List<Transaction>>
@@ -12,8 +13,14 @@ typedef SignerWalletAdapterPropsSignAllTransactions = Future<List<Transaction>>
 typedef SignerWalletAdapterPropsSignTransaction = Future<Transaction> Function(
     Transaction)?;
 
+abstract class CompatibilityProps {
+  bool canEncrypt();
+  bool canUseDialectCloud();
+  bool canUseSolana();
+}
+
 abstract class DialectWalletAdapter {
-  Ed25519HDKeyPair publicKey;
+  Ed25519HDPublicKey publicKey;
   SignerWalletAdapterPropsSignTransaction signTransaction;
   SignerWalletAdapterPropsSignAllTransactions signAllTransactions;
   MessageSignerWalletAdapterPropsSignMessage signMessage;
@@ -25,10 +32,4 @@ abstract class DialectWalletAdapter {
       this.signAllTransactions,
       this.signMessage,
       this.diffieHellman});
-}
-
-class DiffieHellmanResult {
-  Uint8List publicKey;
-  Uint8List secretKey;
-  DiffieHellmanResult({required this.publicKey, required this.secretKey});
 }

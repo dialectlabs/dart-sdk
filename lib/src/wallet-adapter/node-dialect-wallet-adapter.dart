@@ -1,10 +1,11 @@
 import 'dart:typed_data';
 
+import 'package:dialect_sdk/src/core/utils/ed2curve-utils.dart';
 import 'package:dialect_sdk/src/core/utils/environment-utils.dart';
 import 'package:dialect_sdk/src/core/utils/nacl-utils.dart';
 import 'package:dialect_sdk/src/dialect_sdk_base.dart';
+import 'package:dialect_sdk/src/internal/encryption/encryption-keys-provider.dart';
 import 'package:dialect_sdk/src/wallet-adapter/dialect-wallet-adapter.interface.dart';
-import 'package:pinenacl/tweetnacl.dart';
 import 'package:solana/encoder.dart';
 import 'package:solana/solana.dart' as solana;
 
@@ -13,7 +14,7 @@ class NodeDialectWalletAdapter extends DialectWalletAdapter {
 
   NodeDialectWalletAdapter({required this.keypair})
       : super(
-            publicKey: keypair,
+            publicKey: keypair.publicKey,
             signMessage: (message) {
               return NodeDialectWalletAdapter._signMessage(keypair, message);
             },
@@ -24,9 +25,9 @@ class NodeDialectWalletAdapter extends DialectWalletAdapter {
               return NodeDialectWalletAdapter._signAllTransactions(
                   keypair, txs);
             },
-            diffieHellman: (publicKey) {
+            diffieHellman: () {
               return NodeDialectWalletAdapter._diffieHellman(
-                  keypair, publicKey);
+                  keypair, Uint8List.fromList(keypair.publicKey.bytes));
             });
 
   static Future<NodeDialectWalletAdapter> create(
@@ -48,20 +49,12 @@ class NodeDialectWalletAdapter extends DialectWalletAdapter {
     return NodeDialectWalletAdapter(keypair: generated);
   }
 
-  static Future<DiffieHellmanResult> _diffieHellman(
+  static Future<DiffieHellmanKeys> _diffieHellman(
       solana.Ed25519HDKeyPair keypair, Uint8List publicKey) async {
-    var newPk = Uint8List(TweetNaCl.publicKeyLength);
-    var newSk = Uint8List(TweetNaCl.secretKeyLength);
-    var oldSk = Uint8List.fromList((await keypair.extract()).bytes);
-    var pkResult =
-        TweetNaClExt.crypto_sign_ed25519_pk_to_x25519_pk(newPk, publicKey);
-    var skResult =
-        TweetNaClExt.crypto_sign_ed25519_pk_to_x25519_pk(newSk, oldSk);
+    final kp = Ed2CurveUtils.convertKeyPair(
+        publicKey, Uint8List.fromList((await keypair.extract()).bytes));
 
-    if (pkResult == -1 || skResult == -1) {
-      throw Exception('Failed to convert keypair');
-    }
-    return DiffieHellmanResult(publicKey: newPk, secretKey: newSk);
+    return DiffieHellmanKeys(publicKey: kp.publicKey, secretKey: kp.secretKey);
   }
 
   static Future<List<Transaction>> _signAllTransactions(

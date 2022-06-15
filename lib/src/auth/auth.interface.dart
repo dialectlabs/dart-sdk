@@ -1,7 +1,11 @@
 import 'dart:typed_data';
 
+import 'package:dialect_sdk/src/core/converters/uint8list-converter.dart';
 import 'package:dialect_sdk/src/internal/auth/token-utils.dart';
+import 'package:json_annotation/json_annotation.dart';
 import 'package:solana/solana.dart';
+
+part 'auth.interface.g.dart';
 
 class Auth {
   static AuthTokens get tokens {
@@ -18,20 +22,29 @@ abstract class AuthTokens {
 }
 
 abstract class Ed25519TokenSigner {
-  Ed25519HDKeyPair subject;
+  Ed25519HDPublicKey subject;
 
   Ed25519TokenSigner({required this.subject});
 
   Future<Uint8List> sign(Uint8List payload);
 }
 
+@JsonSerializable(explicitToJson: true)
+@Uint8ListConverter()
 class Token {
+  @JsonKey(name: "rawValue")
   String rawValue;
+  @JsonKey(name: "header")
   TokenHeader header;
+  @JsonKey(name: "body")
   TokenBody body;
+  @JsonKey(name: "signature")
   Uint8List signature;
+  @JsonKey(name: "base64Header")
   String base64Header;
+  @JsonKey(name: "base64Body")
   String base64Body;
+  @JsonKey(name: "base64Signature")
   String base64Signature;
 
   Token(
@@ -43,63 +56,39 @@ class Token {
       required this.base64Body,
       required this.base64Signature});
 
-  Token.fromJson(Map<String, dynamic> json)
-      : rawValue = json['rawValue'],
-        header = TokenHeader.fromJson(json['header']),
-        body = TokenBody.fromJson(json['iat']),
-        signature = json['signature'],
-        base64Header = json['base64Header'],
-        base64Body = json['base64Body'],
-        base64Signature = json['base64Signature'];
+  factory Token.fromJson(Map<String, dynamic> json) => _$TokenFromJson(json);
 
-  Map<String, dynamic> toJson() {
-    return {
-      'rawValue': rawValue,
-      'header': header.toJson(),
-      'body': body.toJson(),
-      'signature': signature,
-      'base64Header': base64Header,
-      'base64Body': base64Body,
-      'base64Signature': base64Signature
-    };
-  }
+  Map<String, dynamic> toJson() => _$TokenToJson(this);
 }
 
+@JsonSerializable(explicitToJson: true)
 class TokenBody {
+  @JsonKey(name: "sub")
   String sub;
+  @JsonKey(name: "iat")
   int? iat;
+  @JsonKey(name: "exp")
   int exp;
 
   TokenBody({required this.sub, this.iat, required this.exp});
 
-  TokenBody.fromJson(Map<String, dynamic> json)
-      : sub = json['sub'],
-        exp = json['exp'],
-        iat = json['iat'];
+  factory TokenBody.fromJson(Map<String, dynamic> json) =>
+      _$TokenBodyFromJson(json);
 
-  Map<String, dynamic> toJson() {
-    return {
-      'sub': sub,
-      'exp': exp,
-      'iat': iat,
-    };
-  }
+  Map<String, dynamic> toJson() => _$TokenBodyToJson(this);
 }
 
+@JsonSerializable(explicitToJson: true)
 class TokenHeader {
+  @JsonKey(name: "alg")
   String? alg;
+  @JsonKey(name: "typ")
   String? typ;
 
   TokenHeader({this.alg, this.typ});
 
-  TokenHeader.fromJson(Map<String, dynamic> json)
-      : alg = json['alg'],
-        typ = json['typ'];
+  factory TokenHeader.fromJson(Map<String, dynamic> json) =>
+      _$TokenHeaderFromJson(json);
 
-  Map<String, dynamic> toJson() {
-    return {
-      'alg': alg,
-      'typ': typ,
-    };
-  }
+  Map<String, dynamic> toJson() => _$TokenHeaderToJson(this);
 }

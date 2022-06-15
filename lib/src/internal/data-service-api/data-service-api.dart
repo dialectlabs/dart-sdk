@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:dialect_sdk/src/auth/auth.interface.dart';
 import 'package:dialect_sdk/src/internal/data-service-api/dtos/data-service-dtos.dart';
 import 'package:dialect_sdk/src/internal/data-service-api/token-provider.dart';
+import 'package:dialect_sdk/src/messaging/messaging.interface.dart';
 import 'package:http/http.dart' as http;
 
 Future<T> withReThrowingDataServiceError<T>(Future<T> fn) async {
