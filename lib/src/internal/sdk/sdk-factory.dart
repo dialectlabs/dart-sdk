@@ -18,8 +18,6 @@ import 'package:dialect_sdk/src/wallet-adapter/dialect-wallet-adapter.interface.
 import 'package:dialect_sdk/src/web3/programs.dart';
 import 'package:solana/solana.dart';
 
-final programs = json.decode(programsData);
-
 class DialectSdkFactory {
   static const DEFAULT_BACKENDS = [Backend.dialectCloud, Backend.solana];
   final Config config;
