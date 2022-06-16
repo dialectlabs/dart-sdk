@@ -98,13 +98,3 @@ Map<String, dynamic> _$PostMemberDtoToJson(PostMemberDto instance) =>
       'publicKey': instance.publicKey,
       'scopes': instance.scopes.map((e) => _$MemberScopeDtoEnumMap[e]).toList(),
     };
-
-SendMessageCommand _$SendMessageCommandFromJson(Map<String, dynamic> json) =>
-    SendMessageCommand(
-      text: (json['text'] as List<dynamic>).map((e) => e as num).toList(),
-    );
-
-Map<String, dynamic> _$SendMessageCommandToJson(SendMessageCommand instance) =>
-    <String, dynamic>{
-      'text': instance.text,
-    };

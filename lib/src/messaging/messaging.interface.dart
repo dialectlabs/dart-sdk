@@ -1,97 +1,137 @@
+import 'package:dialect_sdk/src/core/converters/ed25519-public-key-converter.dart';
+import 'package:dialect_sdk/src/sdk/sdk.interface.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:solana/solana.dart';
 
-class CreateDialectCommand {
-  DialectMemberPartial me;
-  DialectMember otherMember;
-  bool encrypted;
+part 'messaging.interface.g.dart';
 
-  CreateDialectCommand(
-      {required DialectMember myself,
-      required this.otherMember,
-      required this.encrypted})
-      : me = DialectMemberPartial(scopes: myself.scopes);
+@JsonSerializable(explicitToJson: true)
+class CreateThreadCommand {
+  @JsonKey(name: "me")
+  final ThreadMemberPartial me;
+  @JsonKey(name: "otherMembers")
+  final List<ThreadMember> otherMembers;
+  @JsonKey(name: "encrypted")
+  final bool encrypted;
+
+  CreateThreadCommand(
+      {required this.me, required this.otherMembers, required this.encrypted});
+
+  factory CreateThreadCommand.fromJson(Map<String, dynamic> json) =>
+      _$CreateThreadCommandFromJson(json);
+  Map<String, dynamic> toJson() => _$CreateThreadCommandToJson(this);
 }
 
-// part 'messaging.interface.g.dart';
+class FindThreadByAddressQuery implements FindThreadQuery {
+  Ed25519HDPublicKey address;
 
-class DialectMember extends DialectMemberPartial {
-  Ed25519HDPublicKey publicKey;
-
-  DialectMember(
-      {required this.publicKey, required List<DialectMemberScope> scopes})
-      : super(scopes: scopes);
+  FindThreadByAddressQuery({required this.address});
 }
 
-class DialectMemberPartial {
-  List<DialectMemberScope> scopes;
+class FindThreadByOtherMemberQuery implements FindThreadQuery {
+  List<Ed25519HDPublicKey> otherMembers;
 
-  DialectMemberPartial({required this.scopes});
+  FindThreadByOtherMemberQuery({required this.otherMembers});
 }
 
-enum DialectMemberScope {
-  @JsonValue(DialectMemberScopeDtoValues.admin)
-  admin,
-  @JsonValue(DialectMemberScopeDtoValues.write)
-  write
-}
-
-class DialectMemberScopeDtoValues {
-  static const String admin = "ADMIN";
-  static const String write = "WRITE";
-}
-
-class FindDialectQuery {
-  Ed25519HDPublicKey publicKey;
-
-  FindDialectQuery({required this.publicKey});
-}
+abstract class FindThreadQuery {}
 
 class Message {
   String text;
   DateTime timestamp;
-  DialectMember author;
+  ThreadMember author;
 
   Message({required this.text, required this.timestamp, required this.author});
 }
 
 abstract class Messaging {
-  Future<Thread> create(CreateDialectCommand command);
-  Future<Thread?> find(FindDialectQuery query);
+  Future<Thread> create(CreateThreadCommand command);
+  Future<Thread?> find(FindThreadQuery query);
   Future<List<Thread>> findAll();
 }
 
+@JsonSerializable()
 class SendMessageCommand {
-  String text;
+  @JsonKey(name: "text")
+  final String text;
 
   SendMessageCommand({required this.text});
+
+  factory SendMessageCommand.fromJson(Map<String, dynamic> json) =>
+      _$SendMessageCommandFromJson(json);
+  Map<String, dynamic> toJson() => _$SendMessageCommandToJson(this);
 }
 
 class Thread {
   Ed25519HDPublicKey publicKey;
-  DialectMember me;
-  DialectMember otherMember;
-  bool encrypted;
+  ThreadMember me;
+  List<ThreadMember> otherMembers;
+  bool encryptionEnabled;
+  bool canBeDecrypted;
+  Backend backend;
+  DateTime updatedAt;
 
   Thread(
       {required this.publicKey,
       required this.me,
-      required this.otherMember,
-      required this.encrypted});
+      required this.otherMembers,
+      required this.encryptionEnabled,
+      required this.canBeDecrypted,
+      required this.backend,
+      required this.updatedAt});
 }
 
-extension DialectMemberScopeDtoExt on DialectMemberScope {
+@JsonSerializable(explicitToJson: true)
+@Ed25519PublicKeyConverter()
+class ThreadMember extends ThreadMemberPartial {
+  @JsonKey(name: 'publicKey')
+  Ed25519HDPublicKey publicKey;
+
+  ThreadMember(
+      {required this.publicKey, required List<ThreadMemberScope> scopes})
+      : super(scopes: scopes);
+  factory ThreadMember.fromJson(Map<String, dynamic> json) =>
+      _$ThreadMemberFromJson(json);
+  @override
+  Map<String, dynamic> toJson() => _$ThreadMemberToJson(this);
+}
+
+@JsonSerializable(explicitToJson: true)
+class ThreadMemberPartial {
+  @JsonKey(name: 'scopes')
+  List<ThreadMemberScope> scopes;
+
+  ThreadMemberPartial({required this.scopes});
+
+  factory ThreadMemberPartial.fromJson(Map<String, dynamic> json) =>
+      _$ThreadMemberPartialFromJson(json);
+  Map<String, dynamic> toJson() => _$ThreadMemberPartialToJson(this);
+}
+
+enum ThreadMemberScope {
+  @JsonValue(ThreadMemberScopeDtoValues.admin)
+  admin,
+  @JsonValue(ThreadMemberScopeDtoValues.write)
+  write
+}
+
+class ThreadMemberScopeDtoValues {
+  static const String admin = "ADMIN";
+  static const String write = "WRITE";
+}
+
+extension ThreadMemberScopeDtoExt on ThreadMemberScope {
   String get value {
     switch (this) {
-      case DialectMemberScope.write:
-        return DialectMemberScopeDtoValues.write;
-      case DialectMemberScope.admin:
-        return DialectMemberScopeDtoValues.admin;
+      case ThreadMemberScope.write:
+        return ThreadMemberScopeDtoValues.write;
+      case ThreadMemberScope.admin:
+        return ThreadMemberScopeDtoValues.admin;
     }
   }
 
-  static DialectMemberScope? find(String value) {
-    for (var val in DialectMemberScope.values) {
+  static ThreadMemberScope? find(String value) {
+    for (var val in ThreadMemberScope.values) {
       if (val.value == value) {
         return val;
       }

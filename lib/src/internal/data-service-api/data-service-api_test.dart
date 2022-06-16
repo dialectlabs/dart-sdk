@@ -27,14 +27,14 @@ void main() {
             signer: DialectWalletAdapterEd25519TokenSigner(
                 dialectWalletAdapter: wallet1),
           ),
-        ).dialects;
+        ).threads;
         wallet2Api = DataServiceApi.create(
           baseUrl,
           TokenProvider.create(
             signer: DialectWalletAdapterEd25519TokenSigner(
                 dialectWalletAdapter: wallet2),
           ),
-        ).dialects;
+        ).threads;
       });
 
       // TODO: delete after a few rounds of tests
@@ -143,8 +143,7 @@ void main() {
         await expectLater(
             wallet1Api.create(CreateDialectCommand(members: [
               PostMemberDto(
-                  publicKey:
-                      (await wallet1.publicKey.extractPublicKey()).toBase58(),
+                  publicKey: wallet1.publicKey.toBase58(),
                   scopes: [MemberScopeDto.admin, MemberScopeDto.write]),
             ], encrypted: false)),
             throwsException);
@@ -155,8 +154,7 @@ void main() {
         await expectLater(
             wallet1Api.create(CreateDialectCommand(members: [
               PostMemberDto(
-                  publicKey:
-                      (await wallet1.publicKey.extractPublicKey()).toBase58(),
+                  publicKey: wallet1.publicKey.toBase58(),
                   scopes: [MemberScopeDto.admin, MemberScopeDto.write]),
               PostMemberDto(
                   publicKey: (await (await Ed25519HDKeyPair.random())
@@ -177,12 +175,10 @@ void main() {
         await expectLater(
             wallet1Api.create(CreateDialectCommand(members: [
               PostMemberDto(
-                  publicKey:
-                      (await wallet1.publicKey.extractPublicKey()).toBase58(),
+                  publicKey: wallet1.publicKey.toBase58(),
                   scopes: [MemberScopeDto.admin, MemberScopeDto.write]),
               PostMemberDto(
-                  publicKey:
-                      (await wallet1.publicKey.extractPublicKey()).toBase58(),
+                  publicKey: wallet1.publicKey.toBase58(),
                   scopes: [MemberScopeDto.admin, MemberScopeDto.write]),
             ], encrypted: false)),
             throwsException);
@@ -194,8 +190,7 @@ void main() {
         await expectLater(
             wallet1Api.create(CreateDialectCommand(members: [
               PostMemberDto(
-                  publicKey:
-                      (await wallet1.publicKey.extractPublicKey()).toBase58(),
+                  publicKey: wallet1.publicKey.toBase58(),
                   scopes: [MemberScopeDto.admin, MemberScopeDto.write]),
               PostMemberDto(
                   publicKey: 'invalid-public-key',
@@ -207,8 +202,7 @@ void main() {
       test('wallet-adapter cannot create dialect with same members', () async {
         final createDialectCommand = CreateDialectCommand(members: [
           PostMemberDto(
-              publicKey:
-                  (await wallet1.publicKey.extractPublicKey()).toBase58(),
+              publicKey: wallet1.publicKey.toBase58(),
               scopes: [MemberScopeDto.admin, MemberScopeDto.write]),
           PostMemberDto(
               publicKey:
@@ -225,8 +219,7 @@ void main() {
         await expectLater(
             wallet1Api.create(CreateDialectCommand(members: [
               PostMemberDto(
-                  publicKey:
-                      (await wallet1.publicKey.extractPublicKey()).toBase58(),
+                  publicKey: wallet1.publicKey.toBase58(),
                   scopes: [MemberScopeDto.write]),
               PostMemberDto(
                   publicKey: (await (await Ed25519HDKeyPair.random())
@@ -245,8 +238,7 @@ void main() {
         // when
         final command = CreateDialectCommand(members: [
           PostMemberDto(
-              publicKey:
-                  (await wallet1.publicKey.extractPublicKey()).toBase58(),
+              publicKey: wallet1.publicKey.toBase58(),
               scopes: [MemberScopeDto.admin, MemberScopeDto.write]),
           PostMemberDto(
               publicKey:
@@ -271,12 +263,10 @@ void main() {
         // given
         final command = CreateDialectCommand(members: [
           PostMemberDto(
-              publicKey:
-                  (await wallet1.publicKey.extractPublicKey()).toBase58(),
+              publicKey: wallet1.publicKey.toBase58(),
               scopes: [MemberScopeDto.admin, MemberScopeDto.write]),
           PostMemberDto(
-              publicKey:
-                  (await wallet2.publicKey.extractPublicKey()).toBase58(),
+              publicKey: wallet2.publicKey.toBase58(),
               scopes: [MemberScopeDto.admin, MemberScopeDto.write]),
         ], encrypted: false);
 
@@ -294,12 +284,10 @@ void main() {
         // given
         final command = CreateDialectCommand(members: [
           PostMemberDto(
-              publicKey:
-                  (await wallet1.publicKey.extractPublicKey()).toBase58(),
+              publicKey: wallet1.publicKey.toBase58(),
               scopes: [MemberScopeDto.admin, MemberScopeDto.write]),
           PostMemberDto(
-              publicKey:
-                  (await wallet2.publicKey.extractPublicKey()).toBase58(),
+              publicKey: wallet2.publicKey.toBase58(),
               scopes: [MemberScopeDto.admin]),
         ], encrypted: false);
 
@@ -318,8 +306,7 @@ void main() {
         expect(before, equals([]));
         final createDialect1Command = CreateDialectCommand(members: [
           PostMemberDto(
-              publicKey:
-                  (await wallet1.publicKey.extractPublicKey()).toBase58(),
+              publicKey: wallet1.publicKey.toBase58(),
               scopes: [MemberScopeDto.admin, MemberScopeDto.write]),
           PostMemberDto(
               publicKey:
@@ -330,8 +317,7 @@ void main() {
 
         final createDialect2Command = CreateDialectCommand(members: [
           PostMemberDto(
-              publicKey:
-                  (await wallet1.publicKey.extractPublicKey()).toBase58(),
+              publicKey: wallet1.publicKey.toBase58(),
               scopes: [MemberScopeDto.admin, MemberScopeDto.write]),
           PostMemberDto(
               publicKey:
@@ -380,8 +366,7 @@ void main() {
 
         final createDialectCommand = CreateDialectCommand(members: [
           PostMemberDto(
-              publicKey:
-                  (await wallet1.publicKey.extractPublicKey()).toBase58(),
+              publicKey: wallet1.publicKey.toBase58(),
               scopes: [MemberScopeDto.admin, MemberScopeDto.write]),
           PostMemberDto(
               publicKey:
@@ -413,23 +398,21 @@ void main() {
         // given
         final createDialectCommand = CreateDialectCommand(members: [
           PostMemberDto(
-              publicKey:
-                  (await wallet1.publicKey.extractPublicKey()).toBase58(),
+              publicKey: wallet1.publicKey.toBase58(),
               scopes: [MemberScopeDto.admin, MemberScopeDto.write]),
           PostMemberDto(
-              publicKey:
-                  (await wallet2.publicKey.extractPublicKey()).toBase58(),
+              publicKey: wallet2.publicKey.toBase58(),
               scopes: [MemberScopeDto.admin, MemberScopeDto.write]),
         ], encrypted: true);
 
         // when
         final dialectAccount = await wallet1Api.create(createDialectCommand);
         final sendMessageCommand1 = SendMessageCommand(
-            text: Uint8List.fromList(utf8.encode('Hello world 💬')));
+            Uint8List.fromList(utf8.encode('Hello world 💬')));
         await wallet1Api.sendMessage(
             dialectAccount.publicKey, sendMessageCommand1);
-        final sendMessageCommand2 = SendMessageCommand(
-            text: Uint8List.fromList(utf8.encode('Hello world')));
+        final sendMessageCommand2 =
+            SendMessageCommand(Uint8List.fromList(utf8.encode('Hello world')));
         final dialectAccountDto = (await wallet1Api.sendMessage(
             dialectAccount.publicKey, sendMessageCommand1));
 
@@ -444,11 +427,11 @@ void main() {
         final expectedMessages = {
           {
             'text': sendMessageCommand1.text,
-            'owner': (await wallet1.publicKey.extractPublicKey()).toBase58()
+            'owner': wallet1.publicKey.toBase58()
           },
           {
             'text': sendMessageCommand2.text,
-            'owner': (await wallet2.publicKey.extractPublicKey()).toBase58()
+            'owner': wallet2.publicKey.toBase58()
           }
         };
         expect(messages, equals(expectedMessages));

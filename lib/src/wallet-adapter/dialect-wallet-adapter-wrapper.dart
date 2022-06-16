@@ -1,29 +1,31 @@
 import 'package:dialect_sdk/src/dialect_sdk_base.dart';
+import 'package:dialect_sdk/src/internal/encryption/encryption-keys-provider.dart';
 import 'package:dialect_sdk/src/sdk/errors.dart';
 import 'package:dialect_sdk/src/wallet-adapter/dialect-wallet-adapter.interface.dart';
 import 'package:pinenacl/ed25519.dart';
 import 'package:solana/solana.dart';
 
-class DialectWalletAdapterImpl implements DialectWalletAdapter {
+class DialectWalletAdapterWrapper
+    implements DialectWalletAdapter, CompatibilityProps {
   final DialectWalletAdapter delegate;
-  DialectWalletAdapterImpl({required this.delegate});
+  DialectWalletAdapterWrapper({required this.delegate});
 
   @override
-  MessageEncryptionWalletAdapterPropsDiffieHellman? get diffieHellman =>
-      (((pk) => _diffieHellman(pk)));
+  MessageEncryptionWalletAdapterPropsDiffieHellman get diffieHellman =>
+      (() => _diffieHellman());
 
   @override
   set diffieHellman(
       MessageEncryptionWalletAdapterPropsDiffieHellman? _diffieHellman) {}
 
   @override
-  Ed25519HDKeyPair get publicKey => delegate.publicKey;
+  Ed25519HDPublicKey get publicKey => delegate.publicKey;
 
   @override
-  set publicKey(Ed25519HDKeyPair _publicKey) {}
+  set publicKey(Ed25519HDPublicKey _publicKey) {}
 
   @override
-  SignerWalletAdapterPropsSignAllTransactions? get signAllTransactions =>
+  SignerWalletAdapterPropsSignAllTransactions get signAllTransactions =>
       ((txs) => _signAllTransactions(txs));
 
   @override
@@ -31,21 +33,37 @@ class DialectWalletAdapterImpl implements DialectWalletAdapter {
       SignerWalletAdapterPropsSignAllTransactions? _signAllTransactions) {}
 
   @override
-  MessageSignerWalletAdapterPropsSignMessage? get signMessage =>
+  MessageSignerWalletAdapterPropsSignMessage get signMessage =>
       ((msg) => _signMessage(msg));
 
   @override
   set signMessage(MessageSignerWalletAdapterPropsSignMessage? _signMessage) {}
 
   @override
-  SignerWalletAdapterPropsSignTransaction? get signTransaction =>
+  SignerWalletAdapterPropsSignTransaction get signTransaction =>
       ((tx) => _signTransaction(tx));
 
   @override
   set signTransaction(
       SignerWalletAdapterPropsSignTransaction? _signTransaction) {}
 
-  Future<DiffieHellmanResult> _diffieHellman(Uint8List publicKey) {
+  @override
+  bool canEncrypt() {
+    return delegate.diffieHellman != null;
+  }
+
+  @override
+  bool canUseDialectCloud() {
+    return delegate.signMessage != null;
+  }
+
+  @override
+  bool canUseSolana() {
+    return delegate.signTransaction != null &&
+        delegate.signAllTransactions != null;
+  }
+
+  Future<DiffieHellmanKeys> _diffieHellman() async {
     if (delegate.diffieHellman == null) {
       throw UnsupportedOperationError(
         title: 'Signing not supported',
@@ -53,7 +71,7 @@ class DialectWalletAdapterImpl implements DialectWalletAdapter {
             'Wallet does not support diffie hellman, please use wallet-adapter that supports diffieHellman() operation.',
       );
     }
-    return delegate.diffieHellman!(publicKey);
+    return delegate.diffieHellman!();
   }
 
   Future<List<Transaction>> _signAllTransactions(
@@ -88,5 +106,9 @@ class DialectWalletAdapterImpl implements DialectWalletAdapter {
       );
     }
     return delegate.signTransaction!(transaction);
+  }
+
+  static DialectWalletAdapterWrapper create(DialectWalletAdapter adapter) {
+    return DialectWalletAdapterWrapper(delegate: adapter);
   }
 }

@@ -1,0 +1,24 @@
+import 'dart:convert';
+
+const String programsData = '''
+{
+    "localnet": {
+      "clusterAddress": "http://127.0.0.1:8899",
+      "programAddress": "2YFyZAg8rBtuvzFFiGvXwPHFAQJ2FXZoS7bYCKticpjk"
+    },
+    "devnet": {
+      "clusterAddress": "https://api.devnet.solana.com",
+      "programAddress": "2YFyZAg8rBtuvzFFiGvXwPHFAQJ2FXZoS7bYCKticpjk"
+    },
+    "testnet": {
+      "clusterAddress": "",
+      "programAddress": ""
+    },
+    "mainnet": {
+      "clusterAddress": "https://api.mainnet-beta.solana.com",
+      "programAddress": "CeNUxGUsSeb5RuAGvaMLNx3tEZrpBwQqA7Gs99vMPCAb"
+    }
+  }
+  ''';
+
+final programs = json.decode(programsData);

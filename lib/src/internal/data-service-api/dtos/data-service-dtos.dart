@@ -10,7 +10,6 @@ class CreateDialectCommand {
   final List<PostMemberDto> members;
   @JsonKey(name: "encrypted")
   final bool encrypted;
-
   CreateDialectCommand({required this.members, required this.encrypted});
 
   factory CreateDialectCommand.fromJson(Map<String, dynamic> json) =>
@@ -152,18 +151,6 @@ class PostMemberDto {
   }
 
   Map<String, dynamic> toJson() => _$PostMemberDtoToJson(this);
-}
-
-@JsonSerializable()
-class SendMessageCommand {
-  @JsonKey(name: "text")
-  final List<num> text;
-
-  SendMessageCommand({required this.text});
-
-  factory SendMessageCommand.fromJson(Map<String, dynamic> json) =>
-      _$SendMessageCommandFromJson(json);
-  Map<String, dynamic> toJson() => _$SendMessageCommandToJson(this);
 }
 
 extension MemberScopeDtoExt on MemberScopeDto {

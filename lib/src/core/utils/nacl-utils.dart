@@ -3,6 +3,65 @@ import 'package:pinenacl/tweetnacl.dart';
 import 'package:solana/solana.dart';
 
 class NaClUtils {
+  static const cryptoSecretboxBOXZEROBYTES = 32;
+  static const cryptoBoxBEFORENMBYTES = 32;
+  static const cryptoSecretboxKEYBYTES = 32;
+  static const cryptoSecretboxNONCEBYTES = 24;
+
+  static Uint8List box(Uint8List box, Uint8List nonce, Uint8List publicKey,
+      Uint8List secretKey) {
+    var k = boxBefore(publicKey, secretKey);
+    return secretBox(box, nonce, k);
+  }
+
+  static Uint8List boxBefore(Uint8List publicKey, Uint8List secretKey) {
+    var k = Uint8List(cryptoBoxBEFORENMBYTES);
+    TweetNaCl.crypto_box_beforenm(k, publicKey, secretKey);
+    return k;
+  }
+
+  static Uint8List? boxOpen(Uint8List box, Uint8List nonce, Uint8List publicKey,
+      Uint8List secretKey) {
+    var k = boxBefore(publicKey, secretKey);
+    return secretBoxOpen(box, nonce, k);
+  }
+
+  static checkLengths(Uint8List k, Uint8List n) {
+    if (k.length != cryptoSecretboxKEYBYTES) {
+      throw Exception('bad key size');
+    }
+    if (n.length != cryptoSecretboxNONCEBYTES) {
+      throw Exception('bad nonce size');
+    }
+  }
+
+  static Uint8List secretBox(Uint8List box, Uint8List nonce, Uint8List k) {
+    checkLengths(k, nonce);
+    var c = Uint8List(cryptoSecretboxBOXZEROBYTES + box.length);
+    var m = Uint8List(c.length);
+    for (var i = 0; i < box.length; i++) {
+      c[i + cryptoSecretboxBOXZEROBYTES] = box[i];
+    }
+    TweetNaCl.crypto_secretbox(m, c, c.length, nonce, k);
+    return m.sublist(cryptoSecretboxBOXZEROBYTES);
+  }
+
+  static Uint8List? secretBoxOpen(Uint8List box, Uint8List nonce, Uint8List k) {
+    checkLengths(k, nonce);
+    var c = Uint8List(cryptoSecretboxBOXZEROBYTES + box.length);
+    var m = Uint8List(c.length);
+    for (var i = 0; i < box.length; i++) {
+      c[i + cryptoSecretboxBOXZEROBYTES] = box[i];
+    }
+    if (c.length < 32) return null;
+    try {
+      TweetNaCl.crypto_secretbox_open(m, c, c.length, nonce, k);
+      return m.sublist(cryptoSecretboxBOXZEROBYTES);
+    } catch (e) {
+      return null;
+    }
+  }
+
   // implementation of js complement: nacl.sign.detached
   static Uint8List sign(Uint8List message, Uint8List secret) {
     if (secret.length != TweetNaCl.signatureLength) {
