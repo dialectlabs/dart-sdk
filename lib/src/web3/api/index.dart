@@ -18,9 +18,6 @@ import 'package:solana/solana.dart';
 
 const ACCOUNT_DESCRIPTOR_SIZE = 8;
 
-/*
-User metadata
-*/
 // TODO: Remove device token consts here
 const DEVICE_TOKEN_LENGTH = 64;
 const DEVICE_TOKEN_PADDING_LENGTH = DEVICE_TOKEN_PAYLOAD_LENGTH -
@@ -47,13 +44,14 @@ Future<Account?> accountInfoGet(
 Future<DialectAccount> createDialect(
     {required RpcClient client,
     required ProgramAccount program,
-    required Wallet owner,
+    required KeypairWallet owner,
     required List<Member> members,
     encrypted = false,
     EncryptionProps? encryptionProps}) async {
   members
       .sort((a, b) => a.publicKey.toBase58().compareTo(b.publicKey.toBase58()));
-  final programAddr = await getDialectProgramAddress(program, members);
+  final programAddr = await getDialectProgramAddress(
+      program, members.map((e) => e.publicKey).toList());
   final tx = await client.signAndSendTransaction(
       Message(instructions: [
         DialectInstructions.createDialect(
@@ -65,15 +63,16 @@ Future<DialectAccount> createDialect(
             encrypted,
             members.map((e) => e.scopes).expand((element) => element).toList())
       ]),
-      [owner]);
+      owner.signers);
   await waitForFinality(client: client, transactionStr: tx);
-  return await getDialectForMembers(client, program, members, encryptionProps);
+  return await getDialectForMembers(client, program,
+      members.map((e) => e.publicKey).toList(), encryptionProps);
 }
 
 Future<Metadata> createMetadata(
     {required RpcClient client,
     required ProgramAccount program,
-    required Wallet user}) async {
+    required KeypairWallet user}) async {
   final addressResult =
       await getMetadataProgramAddress(program, user.publicKey);
   final tx = await client.signAndSendTransaction(
@@ -81,26 +80,26 @@ Future<Metadata> createMetadata(
         DialectInstructions.createMetadata(
             user.publicKey, addressResult.publicKey, addressResult.nonce)
       ]),
-      [user]);
+      user.signers);
   await waitForFinality(client: client, transactionStr: tx);
   return await getMetadata(
-      client, program, FlexibleKeypair.fromKeypair(keyPair: user), null);
+      client, program, KeypairWallet.fromKeypair(user.keyPair), null);
 }
 
 Future deleteDialect(RpcClient client, ProgramAccount program,
-    DialectAccount dialectAccount, Wallet owner) async {
-  final addressResult =
-      await getDialectProgramAddress(program, dialectAccount.dialect.members);
+    DialectAccount dialectAccount, KeypairWallet owner) async {
+  final addressResult = await getDialectProgramAddress(
+      program, dialectAccount.dialect.members.map((e) => e.publicKey).toList());
   await client.signAndSendTransaction(
       Message(instructions: [
         DialectInstructions.closeDialect(
             owner.publicKey, addressResult.publicKey, addressResult.nonce)
       ]),
-      [owner]);
+      owner.signers);
 }
 
 Future deleteMetadata(
-    RpcClient client, ProgramAccount program, Wallet user) async {
+    RpcClient client, ProgramAccount program, KeypairWallet user) async {
   final addressResult =
       await getMetadataProgramAddress(program, user.publicKey);
   await client.signAndSendTransaction(
@@ -108,7 +107,7 @@ Future deleteMetadata(
         DialectInstructions.closeMetadata(
             user.publicKey, addressResult.publicKey, addressResult.nonce)
       ]),
-      [user]);
+      user.signers);
 }
 
 Future<List<DialectAccount>> findDialects(
@@ -151,27 +150,41 @@ Future<DialectAccount> getDialect(RpcClient client, ProgramAccount program,
 Future<DialectAccount> getDialectForMembers(
     RpcClient client,
     ProgramAccount program,
-    List<Member> members,
+    List<Ed25519HDPublicKey> members,
     EncryptionProps? encryptionProps) async {
-  members
-      .sort((a, b) => a.publicKey.toBase58().compareTo(b.publicKey.toBase58()));
+  members.sort((a, b) => a.toBase58().compareTo(b.toBase58()));
   final pubKeyResult = await getDialectProgramAddress(program, members);
   return await getDialect(
       client, program, pubKeyResult.publicKey, encryptionProps);
 }
 
 Future<ProgramAddressResult> getDialectProgramAddress(
-    ProgramAccount program, List<Member> members) {
+    ProgramAccount program, List<Ed25519HDPublicKey> members) {
   var seeds = [
     utf8.encode('dialect'),
-    ...members.map((e) => utf8.encode(e.publicKey.toBase58()))
+    ...members.map((e) => utf8.encode(e.toBase58()))
   ];
   return findProgramAddressWithNonce(
       seeds: seeds, programId: Ed25519HDPublicKey.fromBase58(program.pubkey));
 }
 
+Future<List<DialectAccount>> getDialects(
+    RpcClient client,
+    ProgramAccount program,
+    KeypairWallet user,
+    EncryptionProps? encryptionProps) async {
+  final metadata = await getMetadata(client, program, user, null);
+  final enbaledSubscriptions =
+      metadata.subscriptions.where((element) => element.enabled);
+  final dialects = await Future.wait(enbaledSubscriptions
+      .map((e) => getDialect(client, program, e.pubKey, encryptionProps)));
+  dialects.sort((d1, d2) =>
+      d2.dialect.lastMessageTimestamp - d1.dialect.lastMessageTimestamp);
+  return dialects;
+}
+
 Future<Metadata> getMetadata(RpcClient client, ProgramAccount program,
-    FlexibleKeypair user, FlexibleKeypair? otherParty) async {
+    KeypairWallet user, KeypairWallet? otherParty) async {
   var shouldDecrypt = false;
   var userIsKeypair = user.isKeypair;
   var otherPartyIsKeypair = otherParty != null && otherParty.isKeypair;
@@ -183,7 +196,7 @@ Future<Metadata> getMetadata(RpcClient client, ProgramAccount program,
       program,
       userIsKeypair
           ? (await user.keyPair!.extractPublicKey())
-          : user.publicKey!);
+          : user.publicKey);
   final account =
       await client.getAccountInfo(addressResult.publicKey.toBase58());
   var binary = account?.data as BinaryAccountData;
@@ -253,11 +266,11 @@ Future<msg.Message> sendMessage(
     RpcClient client,
     ProgramAccount program,
     DialectAccount dialectAccount,
-    Wallet sender,
+    KeypairWallet sender,
     String text,
     EncryptionProps? encryptionProps) async {
-  final addressResult =
-      await getDialectProgramAddress(program, dialectAccount.dialect.members);
+  final addressResult = await getDialectProgramAddress(
+      program, dialectAccount.dialect.members.map((e) => e.publicKey).toList());
   final textSerde = TextSerdeFactory.create(
       DialectAttributes(
           dialectAccount.dialect.encrypted, dialectAccount.dialect.members),
@@ -268,7 +281,7 @@ Future<msg.Message> sendMessage(
         DialectInstructions.sendMessage(sender.publicKey,
             addressResult.publicKey, addressResult.nonce, serializedText)
       ]),
-      [sender]);
+      sender.signers);
   final d = await getDialect(
       client, program, addressResult.publicKey, encryptionProps);
   return d.dialect.messages[d.dialect.nextMessageIdx - 1];
@@ -277,4 +290,18 @@ Future<msg.Message> sendMessage(
 class FindDialectQuery {
   Ed25519HDPublicKey? userPk;
   FindDialectQuery({required this.userPk});
+}
+
+class KeypairWallet {
+  Ed25519HDKeyPair? keyPair;
+  Ed25519HDPublicKey? wallet;
+  KeypairWallet.fromKeypair(this.keyPair);
+  KeypairWallet.fromWallet(this.wallet);
+
+  bool get isKeypair => keyPair != null;
+  bool get isWallet => wallet != null;
+
+  Ed25519HDPublicKey get publicKey =>
+      keyPair != null ? keyPair!.publicKey : wallet!;
+  List<Ed25519HDKeyPair> get signers => keyPair != null ? [keyPair!] : [];
 }

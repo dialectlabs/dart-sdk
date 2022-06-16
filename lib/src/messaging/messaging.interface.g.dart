@@ -25,7 +25,7 @@ Map<String, dynamic> _$CreateThreadCommandToJson(
 
 SendMessageCommand _$SendMessageCommandFromJson(Map<String, dynamic> json) =>
     SendMessageCommand(
-      text: (json['text'] as List<dynamic>).map((e) => e as num).toList(),
+      text: json['text'] as String,
     );
 
 Map<String, dynamic> _$SendMessageCommandToJson(SendMessageCommand instance) =>

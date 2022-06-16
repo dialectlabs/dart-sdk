@@ -158,7 +158,7 @@ class DataServiceThread extends Thread {
             otherMembers: otherMembers,
             publicKey: address,
             canBeDecrypted: canBeDecrypted,
-            backend: Backend.DialectCloud,
+            backend: Backend.dialectCloud,
             updatedAt: updatedAt);
 }
 

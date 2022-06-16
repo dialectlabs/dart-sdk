@@ -53,7 +53,7 @@ abstract class Messaging {
 @JsonSerializable()
 class SendMessageCommand {
   @JsonKey(name: "text")
-  final List<num> text;
+  final String text;
 
   SendMessageCommand({required this.text});
 

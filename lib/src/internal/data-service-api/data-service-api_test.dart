@@ -4,7 +4,6 @@ import 'package:dialect_sdk/src/internal/auth/token-utils.dart';
 import 'package:dialect_sdk/src/internal/data-service-api/data-service-api.dart';
 import 'package:dialect_sdk/src/internal/data-service-api/dtos/data-service-dtos.dart';
 import 'package:dialect_sdk/src/internal/data-service-api/token-provider.dart';
-import 'package:dialect_sdk/src/messaging/messaging.interface.dart';
 import 'package:dialect_sdk/src/wallet-adapter/node-dialect-wallet-adapter.dart';
 import 'package:pinenacl/ed25519.dart';
 import 'package:solana/solana.dart';
@@ -28,14 +27,14 @@ void main() {
             signer: DialectWalletAdapterEd25519TokenSigner(
                 dialectWalletAdapter: wallet1),
           ),
-        ).dialects;
+        ).threads;
         wallet2Api = DataServiceApi.create(
           baseUrl,
           TokenProvider.create(
             signer: DialectWalletAdapterEd25519TokenSigner(
                 dialectWalletAdapter: wallet2),
           ),
-        ).dialects;
+        ).threads;
       });
 
       // TODO: delete after a few rounds of tests
@@ -409,11 +408,11 @@ void main() {
         // when
         final dialectAccount = await wallet1Api.create(createDialectCommand);
         final sendMessageCommand1 = SendMessageCommand(
-            text: Uint8List.fromList(utf8.encode('Hello world 💬')));
+            Uint8List.fromList(utf8.encode('Hello world 💬')));
         await wallet1Api.sendMessage(
             dialectAccount.publicKey, sendMessageCommand1);
-        final sendMessageCommand2 = SendMessageCommand(
-            text: Uint8List.fromList(utf8.encode('Hello world')));
+        final sendMessageCommand2 =
+            SendMessageCommand(Uint8List.fromList(utf8.encode('Hello world')));
         final dialectAccountDto = (await wallet1Api.sendMessage(
             dialectAccount.publicKey, sendMessageCommand1));
 

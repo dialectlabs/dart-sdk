@@ -1,9 +1,9 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:dialect_sdk/src/auth/auth.interface.dart';
 import 'package:dialect_sdk/src/internal/data-service-api/dtos/data-service-dtos.dart';
 import 'package:dialect_sdk/src/internal/data-service-api/token-provider.dart';
-import 'package:dialect_sdk/src/messaging/messaging.interface.dart';
 import 'package:http/http.dart' as http;
 
 Future<T> withReThrowingDataServiceError<T>(Future<T> fn) async {
@@ -16,13 +16,13 @@ Future<T> withReThrowingDataServiceError<T>(Future<T> fn) async {
 }
 
 class DataServiceApi {
-  final DataServiceDialectsApi dialects;
-  DataServiceApi({required this.dialects});
+  final DataServiceDialectsApi threads;
+  DataServiceApi({required this.threads});
 
   static DataServiceApi create(String baseUrl, TokenProvider tokenProvider) {
     final dialectsApi = DataServiceDialectsApiClient(
         baseUrl: baseUrl, tokenProvider: tokenProvider);
-    return DataServiceApi(dialects: dialectsApi);
+    return DataServiceApi(threads: dialectsApi);
   }
 }
 
@@ -107,4 +107,11 @@ class DataServiceDialectsApiClient implements DataServiceDialectsApi {
       return DialectAccountDto.fromJson(JsonDecoder().convert(value.body));
     }));
   }
+}
+
+class SendMessageCommand {
+  final Uint8List text;
+  SendMessageCommand(this.text);
+
+  Map<String, dynamic> toJson() => {"text": text};
 }

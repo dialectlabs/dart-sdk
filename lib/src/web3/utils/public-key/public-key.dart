@@ -66,17 +66,6 @@ Future<List<int>> _computeHash(List<int> source) async {
 Iterable<int> _flatten(Iterable<int> concatenated, Iterable<int> current) =>
     concatenated.followedBy(current).toList();
 
-class FlexibleKeypair {
-  Ed25519HDPublicKey? publicKey;
-  Ed25519HDKeyPair? keyPair;
-
-  FlexibleKeypair.fromKeypair({required this.keyPair});
-  FlexibleKeypair.fromPublicKey({required this.publicKey});
-
-  bool get isKeypair => keyPair != null;
-  bool get isPubKey => publicKey != null;
-}
-
 class ProgramAddressResult {
   Ed25519HDPublicKey publicKey;
   int nonce;

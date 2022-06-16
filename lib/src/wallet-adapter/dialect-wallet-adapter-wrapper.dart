@@ -107,4 +107,8 @@ class DialectWalletAdapterWrapper
     }
     return delegate.signTransaction!(transaction);
   }
+
+  static DialectWalletAdapterWrapper create(DialectWalletAdapter adapter) {
+    return DialectWalletAdapterWrapper(delegate: adapter);
+  }
 }
