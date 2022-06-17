@@ -17,8 +17,9 @@ dependencies:
   http: ^0.13.4
   json_serializable: ^6.2.0
   pinenacl: ^0.3.4
-  shared_preferences: ^0.5.5
-  solana: ^0.24.0+1
+  recase: ^4.0.0
+  shared_preferences: ^2.0.15
+  solana: ^0.25.0
 #   path: ^1.8.0
 
 dev_dependencies:

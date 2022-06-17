@@ -38,7 +38,9 @@ class SessionStorageEncryptionKeysStore extends EncryptionKeysStore {
     final prefs = await SharedPreferences.getInstance();
     try {
       final token = prefs.getString(sessionStorageEncryptionKeysKey);
-      return DiffieHellmanKeys.fromJson(JsonDecoder().convert(token));
+      return token != null
+          ? DiffieHellmanKeys.fromJson(JsonDecoder().convert(token))
+          : null;
     } catch (e) {
       return null;
     }

@@ -42,7 +42,7 @@ DialectDto _$DialectDtoFromJson(Map<String, dynamic> json) => DialectDto(
           .map((e) => MessageDto.fromJson(e as Map<String, dynamic>))
           .toList(),
       nextMessageIdx: json['nextMessageIdx'] as num,
-      lastMessageTimestamp: json['lastMessageTimestamp'] as num,
+      lastMessageTimestamp: json['lastMessageTimestamp'] as int,
       encrypted: json['encrypted'] as bool,
     );
 
@@ -74,8 +74,8 @@ const _$MemberScopeDtoEnumMap = {
 
 MessageDto _$MessageDtoFromJson(Map<String, dynamic> json) => MessageDto(
       owner: json['owner'] as String,
-      text: (json['text'] as List<dynamic>).map((e) => e as num).toList(),
-      timestamp: json['timestamp'] as num,
+      text: (json['text'] as List<dynamic>).map((e) => e as int).toList(),
+      timestamp: json['timestamp'] as int,
     );
 
 Map<String, dynamic> _$MessageDtoToJson(MessageDto instance) =>

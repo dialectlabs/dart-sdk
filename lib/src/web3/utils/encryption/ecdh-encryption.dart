@@ -10,6 +10,7 @@ Uint8List ecdhDecrypt(Uint8List payload, Curve25519KeyPair keyPair,
     Ed25519Key otherPartyPublicKey, Uint8List nonce) {
   final decrypted = NaClUtils.boxOpen(payload, nonce,
       ed25519PublicKeyToCurve25519(otherPartyPublicKey), keyPair.secretKey);
+
   if (decrypted == null) {
     throw AuthenticationFailedError();
   }
@@ -18,8 +19,22 @@ Uint8List ecdhDecrypt(Uint8List payload, Curve25519KeyPair keyPair,
 
 Uint8List ecdhEncrypt(Uint8List payload, Curve25519KeyPair keyPair,
     Ed25519Key otherPartyPublicKey, Uint8List nonce) {
-  return NaClUtils.box(payload, nonce,
+  print("BOX OPEN $payload");
+  print("BOX OPEN $nonce");
+  print("BOX OPEN $otherPartyPublicKey");
+  print("BOX OPEN ${ed25519PublicKeyToCurve25519(otherPartyPublicKey)}");
+  print("BOX OPEN ${keyPair.secretKey}");
+  print("");
+  final list = NaClUtils.box(payload, nonce,
       ed25519PublicKeyToCurve25519(otherPartyPublicKey), keyPair.secretKey);
+  // print("ENCRYPTED $list");
+  // print("PAYLOAD $payload");
+  // print("OPK $otherPartyPublicKey");
+  // print("SK ${keyPair.secretKey}");
+  // print("NONCE $nonce");
+  // print("");
+
+  return list;
 }
 
 Curve25519KeyPair ed25519KeyPairToCurve25519(Ed25519KeyPair edKeyPair) {

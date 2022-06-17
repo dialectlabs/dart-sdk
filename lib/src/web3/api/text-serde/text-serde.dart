@@ -24,7 +24,14 @@ class EncryptedTextSerde implements TextSerde {
   String deserialize(Uint8List bytes) {
     final encryptionNonce = bytes.sublist(0, NONCE_SIZE_BYTES);
     final encryptedText = bytes.sublist(NONCE_SIZE_BYTES, bytes.length);
-    final otherMember = _findOtherMember(encryptionProps.ed25519PublicKey);
+
+    final otherMember = findOtherMember(encryptionProps.ed25519PublicKey);
+
+    // print("DEC MSG: $encryptedText");
+    // print(
+    //     "DEC KP: ${encryptionProps.diffieHellmanKeyPair.publicKey} ${encryptionProps.diffieHellmanKeyPair.secretKey}");
+    // print("DEC OPK: ${Uint8List.fromList(otherMember.bytes)}");
+    // print("DEC NON: $encryptionNonce");
     final encodedText = ecdhDecrypt(
         encryptedText,
         encryptionProps.diffieHellmanKeyPair,
@@ -33,22 +40,7 @@ class EncryptedTextSerde implements TextSerde {
     return _unencryptedTextSerde.deserialize(encodedText);
   }
 
-  @override
-  Uint8List serialize(String text) {
-    final publicKey = encryptionProps.ed25519PublicKey;
-    final senderMemberIdx = _findMemberIdx(publicKey);
-    final textBytes = _unencryptedTextSerde.serialize(text);
-    final otherMember = _findOtherMember(publicKey);
-    final encryptionNonce = generateRandomNonceWithPrefix(senderMemberIdx);
-    final encryptedText = ecdhEncrypt(
-        textBytes,
-        encryptionProps.diffieHellmanKeyPair,
-        Uint8List.fromList(otherMember.bytes),
-        encryptionNonce);
-    return Uint8List.fromList(encryptedText + encryptedText);
-  }
-
-  int _findMemberIdx(Ed25519HDPublicKey key) {
+  int findMemberIdx(Ed25519HDPublicKey key) {
     final memberIdx =
         members.indexWhere((element) => element.toBase58() == key.toBase58());
     if (memberIdx == -1) {
@@ -57,14 +49,30 @@ class EncryptedTextSerde implements TextSerde {
     return memberIdx;
   }
 
-  Ed25519HDPublicKey _findOtherMember(Ed25519HDPublicKey key) {
+  Ed25519HDPublicKey findOtherMember(Ed25519HDPublicKey key) {
     try {
       final otherMember =
-          members.firstWhere((element) => element.toBase58() == key.toBase58());
+          members.firstWhere((element) => element.toBase58() != key.toBase58());
       return otherMember;
     } catch (e) {
       throw Exception('Expected to have other member');
     }
+  }
+
+  @override
+  Uint8List serialize(String text) {
+    final publicKey = encryptionProps.ed25519PublicKey;
+    final senderMemberIdx = findMemberIdx(publicKey);
+    final textBytes = _unencryptedTextSerde.serialize(text);
+    final otherMember = findOtherMember(publicKey);
+    final encryptionNonce = generateRandomNonceWithPrefix(senderMemberIdx);
+
+    final encryptedText = ecdhEncrypt(
+        textBytes,
+        encryptionProps.diffieHellmanKeyPair,
+        Uint8List.fromList(otherMember.bytes),
+        encryptionNonce);
+    return Uint8List.fromList(encryptionNonce + encryptedText);
   }
 }
 

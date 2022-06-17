@@ -58,6 +58,8 @@ class NaClUtils {
       TweetNaCl.crypto_secretbox_open(m, c, c.length, nonce, k);
       return m.sublist(cryptoSecretboxBOXZEROBYTES);
     } catch (e) {
+      print("SBO ERROR $e");
+
       return null;
     }
   }

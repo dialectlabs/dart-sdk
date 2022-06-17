@@ -1,24 +1,28 @@
-import 'dart:convert';
+final programs = ProgramsConfig.standard;
 
-const String programsData = '''
-{
-    "localnet": {
-      "clusterAddress": "http://127.0.0.1:8899",
-      "programAddress": "2YFyZAg8rBtuvzFFiGvXwPHFAQJ2FXZoS7bYCKticpjk"
-    },
-    "devnet": {
-      "clusterAddress": "https://api.devnet.solana.com",
-      "programAddress": "2YFyZAg8rBtuvzFFiGvXwPHFAQJ2FXZoS7bYCKticpjk"
-    },
-    "testnet": {
-      "clusterAddress": "",
-      "programAddress": ""
-    },
-    "mainnet": {
-      "clusterAddress": "https://api.mainnet-beta.solana.com",
-      "programAddress": "CeNUxGUsSeb5RuAGvaMLNx3tEZrpBwQqA7Gs99vMPCAb"
-    }
-  }
-  ''';
+class ProgramConfig {
+  static ProgramConfig get devnet => ProgramConfig(
+      "https://api.devnet.solana.com",
+      "2YFyZAg8rBtuvzFFiGvXwPHFAQJ2FXZoS7bYCKticpjk");
+  static ProgramConfig get localnet => ProgramConfig(
+      "http://127.0.0.1:8899", "2YFyZAg8rBtuvzFFiGvXwPHFAQJ2FXZoS7bYCKticpjk");
+  static ProgramConfig get mainnet => ProgramConfig(
+      "https://api.mainnet-beta.solana.com",
+      "CeNUxGUsSeb5RuAGvaMLNx3tEZrpBwQqA7Gs99vMPCAb");
 
-final programs = json.decode(programsData);
+  static ProgramConfig get testnet => ProgramConfig("", "");
+  String clusterAddress;
+  String programAddress;
+  ProgramConfig(this.clusterAddress, this.programAddress);
+}
+
+class ProgramsConfig {
+  static ProgramsConfig get standard => ProgramsConfig(
+      ProgramConfig.mainnet, ProgramConfig.devnet, ProgramConfig.localnet);
+  ProgramConfig mainnet;
+  ProgramConfig devnet;
+
+  ProgramConfig localnet;
+
+  ProgramsConfig(this.mainnet, this.devnet, this.localnet);
+}

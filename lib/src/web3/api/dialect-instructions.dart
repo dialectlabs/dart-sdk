@@ -18,7 +18,7 @@ class DialectInstructions {
           pubKey: SYSTEM_PROGRAM_ID, isSigner: false, isWriteable: false),
     ];
     List<int> data = [
-      ...sha1
+      ...sha256
           .convert(Uint8List.fromList("global:close_dialect".codeUnits))
           .bytes
           .sublist(0, 8),
@@ -39,7 +39,7 @@ class DialectInstructions {
           pubKey: SYSTEM_PROGRAM_ID, isSigner: false, isWriteable: false),
     ];
     List<int> data = [
-      ...sha1
+      ...sha256
           .convert(Uint8List.fromList("global:create_metadata".codeUnits))
           .bytes
           .sublist(0, 8),
@@ -68,7 +68,7 @@ class DialectInstructions {
           pubKey: SYSTEM_PROGRAM_ID, isSigner: false, isWriteable: false),
     ];
     List<int> data = [
-      ...sha1
+      ...sha256
           .convert(Uint8List.fromList("global:create_dialect".codeUnits))
           .bytes
           .sublist(0, 8),
@@ -93,7 +93,7 @@ class DialectInstructions {
           pubKey: SYSTEM_PROGRAM_ID, isSigner: false, isWriteable: false),
     ];
     List<int> data = [
-      ...sha1
+      ...sha256
           .convert(Uint8List.fromList("global:create_metadata".codeUnits))
           .bytes
           .sublist(0, 8),
@@ -114,7 +114,7 @@ class DialectInstructions {
           pubKey: SYSTEM_PROGRAM_ID, isSigner: false, isWriteable: false),
     ];
     List<int> data = [
-      ...sha1
+      ...sha256
           .convert(Uint8List.fromList("global:send_message".codeUnits))
           .bytes
           .sublist(0, 8),
@@ -146,7 +146,7 @@ class DialectInstructions {
           pubKey: SYSTEM_PROGRAM_ID, isSigner: false, isWriteable: false),
     ];
     List<int> data = [
-      ...sha1
+      ...sha256
           .convert(Uint8List.fromList("global:subscribe_user".codeUnits))
           .bytes
           .sublist(0, 8),

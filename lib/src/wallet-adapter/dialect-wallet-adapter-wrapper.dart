@@ -12,40 +12,49 @@ class DialectWalletAdapterWrapper
 
   @override
   MessageEncryptionWalletAdapterPropsDiffieHellman get diffieHellman =>
-      (() => _diffieHellman());
+      _diffieHellman;
 
   @override
   set diffieHellman(
-      MessageEncryptionWalletAdapterPropsDiffieHellman? _diffieHellman) {}
+      MessageEncryptionWalletAdapterPropsDiffieHellman? _diffieHellman) {
+    delegate.diffieHellman = _diffieHellman;
+  }
 
   @override
   Ed25519HDPublicKey get publicKey => delegate.publicKey;
 
   @override
-  set publicKey(Ed25519HDPublicKey _publicKey) {}
+  set publicKey(Ed25519HDPublicKey _publicKey) {
+    delegate.publicKey = _publicKey;
+  }
 
   @override
   SignerWalletAdapterPropsSignAllTransactions get signAllTransactions =>
-      ((txs) => _signAllTransactions(txs));
+      _signAllTransactions;
 
   @override
   set signAllTransactions(
-      SignerWalletAdapterPropsSignAllTransactions? _signAllTransactions) {}
+      SignerWalletAdapterPropsSignAllTransactions? _signAllTransactions) {
+    delegate.signAllTransactions = _signAllTransactions;
+  }
 
   @override
-  MessageSignerWalletAdapterPropsSignMessage get signMessage =>
-      ((msg) => _signMessage(msg));
+  MessageSignerWalletAdapterPropsSignMessage get signMessage => _signMessage;
 
   @override
-  set signMessage(MessageSignerWalletAdapterPropsSignMessage? _signMessage) {}
+  set signMessage(MessageSignerWalletAdapterPropsSignMessage? _signMessage) {
+    delegate.signMessage = _signMessage;
+  }
 
   @override
   SignerWalletAdapterPropsSignTransaction get signTransaction =>
-      ((tx) => _signTransaction(tx));
+      _signTransaction;
 
   @override
   set signTransaction(
-      SignerWalletAdapterPropsSignTransaction? _signTransaction) {}
+      SignerWalletAdapterPropsSignTransaction? _signTransaction) {
+    delegate.signTransaction = _signTransaction;
+  }
 
   @override
   bool canEncrypt() {

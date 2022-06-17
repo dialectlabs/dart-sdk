@@ -10,8 +10,10 @@ Future<T> withReThrowingDataServiceError<T>(Future<T> fn) async {
   try {
     return await fn;
   } catch (e) {
-    final err = e as http.ClientException;
-    throw Exception(err.message);
+    if (e is http.ClientException) {
+      throw Exception(e.message);
+    }
+    rethrow;
   }
 }
 
@@ -26,11 +28,19 @@ class DataServiceApi {
   }
 }
 
+class DataServiceApiClientError {
+  String message;
+  String error;
+  int? statusCode;
+
+  DataServiceApiClientError(this.message, this.error, this.statusCode);
+}
+
 abstract class DataServiceDialectsApi {
   Future<DialectAccountDto> create(CreateDialectCommand command);
   Future delete(String publicKey);
-  Future<DialectAccountDto?> find(String publicKey);
-  Future<List<DialectAccountDto?>> findAll();
+  Future<DialectAccountDto> find(String publicKey);
+  Future<List<DialectAccountDto>> findAll({FindDialectQuery? query});
   Future<DialectAccountDto?> sendMessage(
       String publicKey, SendMessageCommand command);
 }
@@ -73,7 +83,7 @@ class DataServiceDialectsApiClient implements DataServiceDialectsApi {
   }
 
   @override
-  Future<DialectAccountDto?> find(String publicKey) async {
+  Future<DialectAccountDto> find(String publicKey) async {
     final token = await tokenProvider.get();
     return withReThrowingDataServiceError(http
         .get(Uri.parse("$baseUrl/$v0/$dialects/$publicKey"),
@@ -84,7 +94,7 @@ class DataServiceDialectsApiClient implements DataServiceDialectsApi {
   }
 
   @override
-  Future<List<DialectAccountDto>> findAll() async {
+  Future<List<DialectAccountDto>> findAll({FindDialectQuery? query}) async {
     final token = await tokenProvider.get();
     return withReThrowingDataServiceError(http
         .get(Uri.parse("$baseUrl/$v0/$dialects"), headers: authHeaders(token))
@@ -107,6 +117,11 @@ class DataServiceDialectsApiClient implements DataServiceDialectsApi {
       return DialectAccountDto.fromJson(JsonDecoder().convert(value.body));
     }));
   }
+}
+
+class FindDialectQuery {
+  String? memberPublicKey;
+  FindDialectQuery({required this.memberPublicKey});
 }
 
 class SendMessageCommand {
