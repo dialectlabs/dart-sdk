@@ -1,9 +1,10 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
+import 'package:dialect_sdk/src/core/utils/ed2curve-utils.dart';
 import 'package:dialect_sdk/src/web3/api/classes/member/member.dart';
 import 'package:dialect_sdk/src/web3/utils/encryption/ecdh-encryption.dart';
 import 'package:dialect_sdk/src/web3/utils/nonce-generator/nonce-generator.dart';
+import 'package:pinenacl/x25519.dart';
 import 'package:solana/solana.dart';
 
 class DialectAttributes {
@@ -20,27 +21,37 @@ class EncryptedTextSerde implements TextSerde {
 
   EncryptedTextSerde({required this.encryptionProps, required this.members});
 
+  Box box(Ed25519HDPublicKey otherMember) {
+    return Box(
+        myPrivateKey:
+            PrivateKey(encryptionProps.diffieHellmanKeyPair.secretKey),
+        theirPublicKey: PublicKey(Ed2CurveUtils.convertPublicKey(
+            Uint8List.fromList(otherMember.bytes))));
+  }
+
   @override
   String deserialize(Uint8List bytes) {
     final encryptionNonce = bytes.sublist(0, NONCE_SIZE_BYTES);
     final encryptedText = bytes.sublist(NONCE_SIZE_BYTES, bytes.length);
-
-    final otherMember = findOtherMember(encryptionProps.ed25519PublicKey);
-
-    // print("DEC MSG: $encryptedText");
-    // print(
-    //     "DEC KP: ${encryptionProps.diffieHellmanKeyPair.publicKey} ${encryptionProps.diffieHellmanKeyPair.secretKey}");
-    // print("DEC OPK: ${Uint8List.fromList(otherMember.bytes)}");
-    // print("DEC NON: $encryptionNonce");
-    final encodedText = ecdhDecrypt(
-        encryptedText,
-        encryptionProps.diffieHellmanKeyPair,
-        Uint8List.fromList(otherMember.bytes),
-        encryptionNonce);
-    return _unencryptedTextSerde.deserialize(encodedText);
+    final otherMember = _findOtherMember(encryptionProps.ed25519PublicKey);
+    final text = box(otherMember)
+        .decrypt(ByteList.fromList(encryptedText), nonce: encryptionNonce);
+    return _unencryptedTextSerde.deserialize(text);
   }
 
-  int findMemberIdx(Ed25519HDPublicKey key) {
+  @override
+  Uint8List serialize(String text) {
+    final publicKey = encryptionProps.ed25519PublicKey;
+    final senderMemberIdx = _findMemberIdx(publicKey);
+    final textBytes = _unencryptedTextSerde.serialize(text);
+    final otherMember = _findOtherMember(publicKey);
+    final encryptionNonce = generateRandomNonceWithPrefix(senderMemberIdx);
+    final encryptedText =
+        box(otherMember).encrypt(textBytes, nonce: encryptionNonce);
+    return Uint8List.fromList(encryptedText);
+  }
+
+  int _findMemberIdx(Ed25519HDPublicKey key) {
     final memberIdx =
         members.indexWhere((element) => element.toBase58() == key.toBase58());
     if (memberIdx == -1) {
@@ -49,7 +60,7 @@ class EncryptedTextSerde implements TextSerde {
     return memberIdx;
   }
 
-  Ed25519HDPublicKey findOtherMember(Ed25519HDPublicKey key) {
+  Ed25519HDPublicKey _findOtherMember(Ed25519HDPublicKey key) {
     try {
       final otherMember =
           members.firstWhere((element) => element.toBase58() != key.toBase58());
@@ -57,22 +68,6 @@ class EncryptedTextSerde implements TextSerde {
     } catch (e) {
       throw Exception('Expected to have other member');
     }
-  }
-
-  @override
-  Uint8List serialize(String text) {
-    final publicKey = encryptionProps.ed25519PublicKey;
-    final senderMemberIdx = findMemberIdx(publicKey);
-    final textBytes = _unencryptedTextSerde.serialize(text);
-    final otherMember = findOtherMember(publicKey);
-    final encryptionNonce = generateRandomNonceWithPrefix(senderMemberIdx);
-
-    final encryptedText = ecdhEncrypt(
-        textBytes,
-        encryptionProps.diffieHellmanKeyPair,
-        Uint8List.fromList(otherMember.bytes),
-        encryptionNonce);
-    return Uint8List.fromList(encryptionNonce + encryptedText);
   }
 }
 

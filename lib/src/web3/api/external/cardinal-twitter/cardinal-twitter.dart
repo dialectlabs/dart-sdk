@@ -1,9 +1,9 @@
 import 'package:borsh_annotation/borsh_annotation.dart';
 import 'package:dialect_sdk/src/web3/api/borsh/borsh-ext.dart';
-import 'package:dialect_sdk/src/web3/api/cardinal-twitter/constants.dart';
-import 'package:dialect_sdk/src/web3/api/cardinal-twitter/dtos.dart';
-import 'package:dialect_sdk/src/web3/api/cardinal-twitter/pda.dart';
 import 'package:dialect_sdk/src/web3/api/classes/account-data.dart' as ad;
+import 'package:dialect_sdk/src/web3/api/external/cardinal-twitter/constants.dart';
+import 'package:dialect_sdk/src/web3/api/external/cardinal-twitter/dtos.dart';
+import 'package:dialect_sdk/src/web3/api/external/cardinal-twitter/pda.dart';
 import 'package:solana/dto.dart';
 import 'package:solana/solana.dart';
 
@@ -124,14 +124,16 @@ Future<ad.AccountData<ReverseEntryData>> getReverseEntry(RpcClient client,
     Ed25519HDPublicKey namespace, Ed25519HDPublicKey publicKey) async {
   try {
     final reverseEntry = await findReverseEntryId(namespace, publicKey);
-    final account =
-        await client.getAccountInfo(reverseEntry.publicKey.toBase58());
+    final account = await client.getAccountInfo(
+        reverseEntry.publicKey.toBase58(),
+        encoding: Encoding.base58);
     final parsed = parseBytesFromAccount(account, ReverseEntryData.fromBorsh);
     return ad.AccountData(parsed, publicKey);
   } catch (e) {
     final reverseEntry = await findDeprecatedReverseEntryId(publicKey);
-    final account =
-        await client.getAccountInfo(reverseEntry.publicKey.toBase58());
+    final account = await client.getAccountInfo(
+        reverseEntry.publicKey.toBase58(),
+        encoding: Encoding.base58);
     final parsed = parseBytesFromAccount(account, ReverseEntryData.fromBorsh);
     return ad.AccountData(parsed, publicKey);
   }

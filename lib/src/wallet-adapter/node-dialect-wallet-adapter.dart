@@ -26,8 +26,7 @@ class NodeDialectWalletAdapter extends DialectWalletAdapter {
                   keypair, txs);
             },
             diffieHellman: () {
-              return NodeDialectWalletAdapter._diffieHellman(
-                  keypair, Uint8List.fromList(keypair.publicKey.bytes));
+              return NodeDialectWalletAdapter._diffieHellman(keypair);
             });
 
   static Future<NodeDialectWalletAdapter> create(
@@ -50,7 +49,7 @@ class NodeDialectWalletAdapter extends DialectWalletAdapter {
   }
 
   static Future<DiffieHellmanKeys> _diffieHellman(
-      solana.Ed25519HDKeyPair keypair, Uint8List publicKey) async {
+      solana.Ed25519HDKeyPair keypair) async {
     final kp = Ed2CurveUtils.convertKeyPair(
         Uint8List.fromList(keypair.publicKey.bytes),
         Uint8List.fromList((await keypair.extract()).bytes));

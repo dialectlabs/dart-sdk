@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:dialect_sdk/src/web3/api/cardinal-twitter/constants.dart';
+import 'package:dialect_sdk/src/web3/api/external/cardinal-twitter/constants.dart';
 import 'package:dialect_sdk/src/web3/utils/public-key/public-key.dart';
 import 'package:solana/solana.dart';
 
