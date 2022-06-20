@@ -20,6 +20,10 @@ dependencies:
   recase: ^4.0.0
   shared_preferences: ^2.0.15
   solana: ^0.25.0
+  solana_name_service:
+    path: ../dart-solana-name-service
+  cardinal_namespaces:
+    path: ../dart-cardinal-twitter
 #   path: ^1.8.0
 
 dev_dependencies:
