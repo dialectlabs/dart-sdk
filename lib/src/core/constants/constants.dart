@@ -2,10 +2,6 @@ import 'package:solana/solana.dart';
 
 final Ed25519HDPublicKey DEFAULT_PUBKEY =
     Ed25519HDPublicKey.fromBase58("11111111111111111111111111111111");
-// final Ed25519HDPublicKey DIALECT_PROGRAM_ID = Ed25519HDPublicKey.fromBase58(
-//     "CeNUxGUsSeb5RuAGvaMLNx3tEZrpBwQqA7Gs99vMPCAb");
-final Ed25519HDPublicKey DIALECT_PROGRAM_ID = Ed25519HDPublicKey.fromBase58(
-    "2YFyZAg8rBtuvzFFiGvXwPHFAQJ2FXZoS7bYCKticpjk");
 final Ed25519HDPublicKey SYSTEM_PROGRAM_ID =
     Ed25519HDPublicKey.fromBase58("11111111111111111111111111111111");
 final Ed25519HDPublicKey SYSVAR_RENT_PUBKEY = Ed25519HDPublicKey.fromBase58(

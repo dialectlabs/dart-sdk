@@ -1,8 +1,8 @@
 import 'dart:convert';
 
-import 'package:dialect_sdk/src/core/constants/constants.dart';
 import 'package:dialect_sdk/src/web3/api/classes/member/member.dart';
 import 'package:dialect_sdk/src/web3/api/index.dart';
+import 'package:dialect_sdk/src/web3/programs.dart';
 import 'package:solana/dto.dart';
 import 'package:solana/solana.dart';
 import 'package:test/test.dart';
@@ -16,12 +16,11 @@ void main() {
     setUp(() async {
       // const networkUrl = "https://api.mainnet-beta.solana.com";
       // const networkUrl = "https://api.devnet.solana.com";
-      const networkUrl = "http://localhost:8899";
+      final networkUrl = programs.localnet.clusterAddress;
+      final dialectProgramId = programs.localnet.programAddress;
       client = RpcClient(networkUrl);
-      final account =
-          await client.getAccountInfo(DIALECT_PROGRAM_ID.toBase58());
-      program = ProgramAccount(
-          account: account!, pubkey: DIALECT_PROGRAM_ID.toBase58());
+      final account = await client.getAccountInfo(dialectProgramId);
+      program = ProgramAccount(account: account!, pubkey: dialectProgramId);
       users = [
         await Ed25519HDKeyPair.random(),
         await Ed25519HDKeyPair.random()

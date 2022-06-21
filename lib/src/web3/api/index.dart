@@ -66,7 +66,8 @@ Future<DialectAccount> createDialect(
             programAddr.publicKey,
             programAddr.nonce,
             encrypted,
-            members.map((e) => e.scopes).expand((element) => element).toList())
+            members.map((e) => e.scopes).expand((element) => element).toList(),
+            Ed25519HDPublicKey.fromBase58(program.pubkey))
       ]),
       owner.signers);
 
@@ -84,7 +85,10 @@ Future<Metadata> createMetadata(
   final tx = await client.signAndSendTransaction(
       Message(instructions: [
         DialectInstructions.createMetadata(
-            user.publicKey, addressResult.publicKey, addressResult.nonce)
+            user.publicKey,
+            addressResult.publicKey,
+            addressResult.nonce,
+            Ed25519HDPublicKey.fromBase58(program.pubkey))
       ]),
       user.signers);
   await waitForFinality(client: client, transactionStr: tx);
@@ -99,7 +103,10 @@ Future deleteDialect(RpcClient client, ProgramAccount program,
   final tx = await client.signAndSendTransaction(
       Message(instructions: [
         DialectInstructions.closeDialect(
-            owner.publicKey, addressResult.publicKey, addressResult.nonce)
+            owner.publicKey,
+            addressResult.publicKey,
+            addressResult.nonce,
+            Ed25519HDPublicKey.fromBase58(program.pubkey))
       ]),
       owner.signers);
   await waitForFinality(client: client, transactionStr: tx);
@@ -112,7 +119,10 @@ Future deleteMetadata(
   final tx = await client.signAndSendTransaction(
       Message(instructions: [
         DialectInstructions.closeMetadata(
-            user.publicKey, addressResult.publicKey, addressResult.nonce)
+            user.publicKey,
+            addressResult.publicKey,
+            addressResult.nonce,
+            Ed25519HDPublicKey.fromBase58(program.pubkey))
       ]),
       user.signers);
   await waitForFinality(client: client, transactionStr: tx);
@@ -289,8 +299,12 @@ Future<msg.Message> sendMessage(
 
   final tx = await client.signAndSendTransaction(
       Message(instructions: [
-        DialectInstructions.sendMessage(sender.publicKey,
-            addressResult.publicKey, addressResult.nonce, serializedText)
+        DialectInstructions.sendMessage(
+            sender.publicKey,
+            addressResult.publicKey,
+            addressResult.nonce,
+            serializedText,
+            Ed25519HDPublicKey.fromBase58(program.pubkey))
       ]),
       sender.signers);
   await waitForFinality(client: client, transactionStr: tx);
