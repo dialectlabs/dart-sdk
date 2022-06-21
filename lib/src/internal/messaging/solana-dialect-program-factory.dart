@@ -2,16 +2,11 @@ import 'package:solana/dto.dart';
 import 'package:solana/solana.dart';
 
 Future<ProgramAccount> createDialectProgram(
-    Ed25519HDPublicKey dialectProgramAddress) async {
-  final account = Account(
-      lamports: 100000,
-      owner: dialectProgramAddress.toBase58(),
-      data: null,
-      executable: false,
-      rentEpoch: 0);
+    RpcClient client, Ed25519HDPublicKey dialectProgramAddress) async {
+  final account = await client.getAccountInfo(dialectProgramAddress.toBase58());
 
   return ProgramAccount(
-      account: account, pubkey: dialectProgramAddress.toBase58());
+      account: account!, pubkey: dialectProgramAddress.toBase58());
 }
 
 // Future establishDialectProgram(

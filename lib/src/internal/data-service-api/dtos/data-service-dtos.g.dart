@@ -56,14 +56,14 @@ Map<String, dynamic> _$DialectDtoToJson(DialectDto instance) =>
     };
 
 MemberDto _$MemberDtoFromJson(Map<String, dynamic> json) => MemberDto(
-      publicKey: json['encrypted'] as String,
+      publicKey: json['publicKey'] as String,
       scopes: (json['scopes'] as List<dynamic>)
           .map((e) => $enumDecode(_$MemberScopeDtoEnumMap, e))
           .toList(),
     );
 
 Map<String, dynamic> _$MemberDtoToJson(MemberDto instance) => <String, dynamic>{
-      'encrypted': instance.publicKey,
+      'publicKey': instance.publicKey,
       'scopes': instance.scopes.map((e) => _$MemberScopeDtoEnumMap[e]).toList(),
     };
 

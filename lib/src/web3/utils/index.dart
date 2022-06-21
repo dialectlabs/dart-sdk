@@ -6,22 +6,26 @@ import 'package:solana/solana.dart';
 Future<TransactionDetails> waitForFinality(
     {required RpcClient client,
     required String transactionStr,
-    Commitment commitment = Commitment.confirmed,
-    int maxRetries = 10,
-    int sleepDuration = 500}) async {
+    Commitment commitment = Commitment.finalized,
+    int maxRetries = 20,
+    int sleepDuration = 1000}) async {
   try {
-    return await waitForFinality_inner(
-        client: client, transactionStr: transactionStr, commitment: commitment);
+    return await waitForFinalityInner(
+        client: client,
+        transactionStr: transactionStr,
+        commitment: commitment,
+        maxRetries: maxRetries,
+        sleepDuration: sleepDuration);
   } catch (e) {
     // TODO: log
     rethrow;
   }
 }
 
-Future<TransactionDetails> waitForFinality_inner(
+Future<TransactionDetails> waitForFinalityInner(
     {required RpcClient client,
     required String transactionStr,
-    Commitment commitment = Commitment.confirmed,
+    Commitment commitment = Commitment.finalized,
     int maxRetries = 10,
     int sleepDuration = 500}) async {
   TransactionDetails? transaction;

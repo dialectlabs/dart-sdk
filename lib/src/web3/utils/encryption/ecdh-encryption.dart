@@ -19,20 +19,8 @@ Uint8List ecdhDecrypt(Uint8List payload, Curve25519KeyPair keyPair,
 
 Uint8List ecdhEncrypt(Uint8List payload, Curve25519KeyPair keyPair,
     Ed25519Key otherPartyPublicKey, Uint8List nonce) {
-  print("BOX OPEN $payload");
-  print("BOX OPEN $nonce");
-  print("BOX OPEN $otherPartyPublicKey");
-  print("BOX OPEN ${ed25519PublicKeyToCurve25519(otherPartyPublicKey)}");
-  print("BOX OPEN ${keyPair.secretKey}");
-  print("");
   final list = NaClUtils.box(payload, nonce,
       ed25519PublicKeyToCurve25519(otherPartyPublicKey), keyPair.secretKey);
-  // print("ENCRYPTED $list");
-  // print("PAYLOAD $payload");
-  // print("OPK $otherPartyPublicKey");
-  // print("SK ${keyPair.secretKey}");
-  // print("NONCE $nonce");
-  // print("");
 
   return list;
 }

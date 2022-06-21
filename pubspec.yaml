@@ -1,11 +1,10 @@
 name: dialect_sdk
 description: A starting point for Dart libraries or applications.
-version: 1.0.0
-# homepage: https://www.example.com
+version: 0.1.0
+homepage: https://github.com/dialectlabs/dart-sdk
 
 environment:
   sdk: '>=2.16.2 <3.0.0'
-
 
 dependencies: 
   borsh: ^0.3.0+3
@@ -14,16 +13,13 @@ dependencies:
   crypto: ^3.0.2
   cryptography: ^2.0.5
   hex: ^0.2.0
-  http: ^0.13.4
   json_serializable: ^6.2.0
   pinenacl: ^0.3.4
   recase: ^4.0.0
   shared_preferences: ^2.0.15
   solana: ^0.25.0
-  solana_name_service:
-    path: ../dart-solana-name-service
-  cardinal_namespaces:
-    path: ../dart-cardinal-twitter
+  dio: ^4.0.6
+  nanoid: ^1.0.0
 #   path: ^1.8.0
 
 dev_dependencies:

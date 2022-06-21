@@ -43,6 +43,7 @@ class DialectSdkFactory {
               walletAdapter: config.wallet,
               client: RpcClient(config.solana.rpcUrl),
               program: (await createDialectProgram(
+                  RpcClient(config.solana.rpcUrl),
                   config.solana.dialectProgramAddress)),
               encryptionKeysProvider: encryptionKeysProvider);
         case Backend.dialectCloud:

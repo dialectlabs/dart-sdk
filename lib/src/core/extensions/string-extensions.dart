@@ -1,6 +1,6 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
-import 'package:pinenacl/ed25519.dart';
 import 'package:solana/base58.dart';
 
 extension StringExtensions on String {
@@ -15,7 +15,7 @@ extension StringExtensions on String {
   }
 
   Uint8List decodeBase64() {
-    return atob().codeUnits.toUint8List();
+    return Uint8List.fromList(atob().codeUnits);
   }
 
   String encodeBase58() {

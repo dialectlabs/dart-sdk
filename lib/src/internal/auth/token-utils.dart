@@ -3,12 +3,21 @@ import 'dart:typed_data';
 
 import 'package:dialect_sdk/src/auth/auth.interface.dart';
 import 'package:dialect_sdk/src/core/constants.dart';
-import 'package:dialect_sdk/src/core/extensions/byte-array-extensions.dart';
 import 'package:dialect_sdk/src/core/extensions/string-extensions.dart';
 import 'package:dialect_sdk/src/core/utils/nacl-utils.dart';
 import 'package:dialect_sdk/src/sdk/errors.dart';
 import 'package:dialect_sdk/src/wallet-adapter/dialect-wallet-adapter.interface.dart';
 import 'package:solana/solana.dart';
+
+String bytesToBase64(Uint8List signature) {
+  final encoded = base64Url.encode(signature);
+  return encoded.replaceAll(RegExp(r'='), '');
+}
+
+String toBase64(String jsonString) {
+  final byteArray = utf8.encode(jsonString);
+  return bytesToBase64(Uint8List.fromList(byteArray));
+}
 
 class AuthTokensImpl implements AuthTokens {
   AuthTokensImpl();
@@ -16,27 +25,25 @@ class AuthTokensImpl implements AuthTokens {
   @override
   Future<Token> generate(Ed25519TokenSigner signer, Duration ttl) async {
     TokenHeader header = TokenHeader(alg: 'ed25519', typ: 'JWT');
-    final headerStr = JsonEncoder().convert(header);
-    final base64Header = headerStr.btoa();
+    final headerStr = JsonEncoder().convert(header.toJson());
+    final base64Header = toBase64(headerStr);
     final nowUtcSeconds = DateTime.now().millisecondsSinceEpoch / 1000;
     final body = TokenBody(
         sub: signer.subject.toBase58(),
         iat: nowUtcSeconds.round(),
         exp: (nowUtcSeconds + ttl.inMilliseconds / 1000).round());
-    final bodyStr = JsonEncoder().convert(body);
-    final base64Body = bodyStr.btoa();
-    final signingPayload = AuthTokensImpl._getSigningPayload(
-        [base64Header, base64Body].join(AuthConstants.authDelimiter));
-    final signature = await signer.sign(signingPayload);
-    final base64Signature = signature.encodeBase64();
-    final rawValue = [base64Header, base64Body, base64Signature]
+    final bodyStr = JsonEncoder().convert(body.toJson());
+    final base64Body = toBase64(bodyStr);
+
+    final sigResult = await sign(base64Header, base64Body, signer);
+    final rawValue = [base64Header, base64Body, sigResult.base64Signature]
         .join(AuthConstants.authDelimiter);
     return Token(
         rawValue: rawValue,
         header: header,
         body: body,
-        signature: signature,
-        base64Signature: base64Signature,
+        signature: sigResult.signature,
+        base64Signature: sigResult.base64Signature,
         base64Body: base64Body,
         base64Header: base64Header);
   }
@@ -51,7 +58,7 @@ class AuthTokensImpl implements AuthTokens {
   bool isSignatureValid(Token token) {
     final signedPayload = [token.base64Header, token.base64Body]
         .join(AuthConstants.authDelimiter);
-    final signingPayload = AuthTokensImpl._getSigningPayload(signedPayload);
+    final signingPayload = Uint8List.fromList(utf8.encode(signedPayload));
     var pk = Ed25519HDPublicKey.fromBase58(token.body.sub);
     return NaClUtils.signDetachedVerify(
         signingPayload, token.signature, Uint8List.fromList(pk.bytes));
@@ -97,9 +104,13 @@ class AuthTokensImpl implements AuthTokens {
     }
   }
 
-  static Uint8List _getSigningPayload(String signedPayload) {
-    return Uint8List.fromList(
-        signedPayload.btoa().split('').map((c) => c.codeUnitAt(0)).toList());
+  Future<SigningResult> sign(
+      String base64Header, String base64Body, Ed25519TokenSigner signer) async {
+    final signingPayload = utf8
+        .encode([base64Header, base64Body].join(AuthConstants.authDelimiter));
+    final signature = await signer.sign(Uint8List.fromList(signingPayload));
+    final base64Signature = bytesToBase64(signature);
+    return SigningResult(signature, base64Signature);
   }
 }
 
@@ -127,6 +138,12 @@ class DialectWalletAdapterEd25519TokenSigner implements Ed25519TokenSigner {
     }
     return dialectWalletAdapter.signMessage!(payload);
   }
+}
+
+class SigningResult {
+  Uint8List signature;
+  String base64Signature;
+  SigningResult(this.signature, this.base64Signature);
 }
 
 // TODO: use base sdk error as a parent

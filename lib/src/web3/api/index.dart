@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:dialect_sdk/src/core/constants/constants.dart';
@@ -70,8 +69,8 @@ Future<DialectAccount> createDialect(
             members.map((e) => e.scopes).expand((element) => element).toList())
       ]),
       owner.signers);
+
   await waitForFinality(client: client, transactionStr: tx);
-  sleep(Duration(seconds: 20));
   return await getDialectForMembers(client, program,
       members.map((e) => e.publicKey).toList(), encryptionProps);
 }
@@ -103,18 +102,20 @@ Future deleteDialect(RpcClient client, ProgramAccount program,
             owner.publicKey, addressResult.publicKey, addressResult.nonce)
       ]),
       owner.signers);
+  await waitForFinality(client: client, transactionStr: tx);
 }
 
 Future deleteMetadata(
     RpcClient client, ProgramAccount program, KeypairWallet user) async {
   final addressResult =
       await getMetadataProgramAddress(program, user.publicKey);
-  await client.signAndSendTransaction(
+  final tx = await client.signAndSendTransaction(
       Message(instructions: [
         DialectInstructions.closeMetadata(
             user.publicKey, addressResult.publicKey, addressResult.nonce)
       ]),
       user.signers);
+  await waitForFinality(client: client, transactionStr: tx);
 }
 
 Future<List<DialectAccount>> findDialects(
@@ -294,8 +295,6 @@ Future<msg.Message> sendMessage(
       sender.signers);
   await waitForFinality(client: client, transactionStr: tx);
 
-  // TODO: remove after testing
-  sleep(Duration(seconds: 20));
   final d = await getDialect(
       client, program, addressResult.publicKey, encryptionProps);
   return d.dialect.messages[0];

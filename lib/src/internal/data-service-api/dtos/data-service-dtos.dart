@@ -1,4 +1,4 @@
-import 'dart:ui';
+import 'dart:convert';
 
 import 'package:json_annotation/json_annotation.dart';
 
@@ -66,8 +66,7 @@ class DialectDto {
 
   @JsonKey(ignore: true)
   @override
-  int get hashCode => hashValues(hashList(members), hashList(messages),
-      nextMessageIdx, encrypted, lastMessageTimestamp);
+  int get hashCode => JsonEncoder().convert(toJson()).hashCode;
 
   @override
   bool operator ==(covariant DialectDto other) {
@@ -83,7 +82,7 @@ class DialectDto {
 
 @JsonSerializable(explicitToJson: true)
 class MemberDto {
-  @JsonKey(name: "encrypted")
+  @JsonKey(name: "publicKey")
   final String publicKey;
   @JsonKey(name: "scopes")
   final List<MemberScopeDto> scopes;
@@ -95,7 +94,7 @@ class MemberDto {
 
   @JsonKey(ignore: true)
   @override
-  int get hashCode => hashValues(hashList(scopes), publicKey);
+  int get hashCode => JsonEncoder().convert(toJson()).hashCode;
 
   @override
   bool operator ==(covariant MemberDto other) {
@@ -147,7 +146,7 @@ class PostMemberDto {
 
   @JsonKey(ignore: true)
   @override
-  int get hashCode => hashValues(publicKey, hashList(scopes));
+  int get hashCode => JsonEncoder().convert(toJson()).hashCode;
 
   @override
   bool operator ==(covariant PostMemberDto other) {

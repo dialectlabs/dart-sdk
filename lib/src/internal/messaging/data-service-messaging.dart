@@ -1,9 +1,11 @@
 import 'package:borsh_annotation/borsh_annotation.dart';
 import 'package:dialect_sdk/src/internal/data-service-api/data-service-api.dart'
     as api;
+import 'package:dialect_sdk/src/internal/data-service-api/data-service-errors.dart';
 import 'package:dialect_sdk/src/internal/data-service-api/dtos/data-service-dtos.dart';
 import 'package:dialect_sdk/src/internal/encryption/encryption-keys-provider.dart';
 import 'package:dialect_sdk/src/internal/messaging/commons.dart';
+import 'package:dialect_sdk/src/internal/messaging/messaging-errors.dart';
 import 'package:dialect_sdk/src/messaging/messaging.interface.dart';
 import 'package:dialect_sdk/src/sdk/errors.dart';
 import 'package:dialect_sdk/src/sdk/sdk.interface.dart';
@@ -65,15 +67,16 @@ class DataServiceMessaging implements Messaging {
   Future<Thread> create(CreateThreadCommand command) async {
     command.encrypted && ((await checkEncryptionSupported()) != null);
     final otherMember = requireSingleMember(command.otherMembers);
-    final dialectAccountDto =
-        await dataServiceDialectsApi.create(CreateDialectCommand(members: [
-      PostMemberDto(
-          publicKey: me.toBase58(),
-          scopes: toDataServiceScopes(command.me.scopes)),
-      PostMemberDto(
-          publicKey: otherMember.publicKey.toBase58(),
-          scopes: toDataServiceScopes(otherMember.scopes))
-    ], encrypted: command.encrypted));
+    final dialectAccountDto = await withErrorParsing(
+        dataServiceDialectsApi.create(CreateDialectCommand(members: [
+          PostMemberDto(
+              publicKey: me.toBase58(),
+              scopes: toDataServiceScopes(command.me.scopes)),
+          PostMemberDto(
+              publicKey: otherMember.publicKey.toBase58(),
+              scopes: toDataServiceScopes(otherMember.scopes))
+        ], encrypted: command.encrypted)),
+        onResourceAlreadyExists: (e) => ThreadAlreadyExistsError());
     return _toDataServiceThread(dialectAccountDto);
   }
 
@@ -110,16 +113,18 @@ class DataServiceMessaging implements Messaging {
 
   @override
   Future<List<Thread>> findAll() async {
-    final dialectAccountDtos = await dataServiceDialectsApi.findAll();
+    final dialectAccountDtos =
+        await withErrorParsing(dataServiceDialectsApi.findAll());
     return Future.wait(dialectAccountDtos.map((e) => _toDataServiceThread(e)));
   }
 
   Future<DialectAccountDto?> _findByAddress(
       FindThreadByAddressQuery query) async {
     try {
-      return await dataServiceDialectsApi.find(query.address.toBase58());
+      return await withErrorParsing(
+          dataServiceDialectsApi.find(query.address.toBase58()));
     } catch (e) {
-      if (e is api.DataServiceApiClientError && e.statusCode == 400) {
+      if (e is ResourceNotFoundError) {
         return null;
       }
       rethrow;
@@ -129,8 +134,10 @@ class DataServiceMessaging implements Messaging {
   Future<DialectAccountDto?> _findByOtherMember(
       FindThreadByOtherMemberQuery query) async {
     final otherMember = requireSingleMember(query.otherMembers);
-    final dialectAccountDtos = await dataServiceDialectsApi.findAll(
-        query: api.FindDialectQuery(memberPublicKey: otherMember.toBase58()));
+    final dialectAccountDtos = await withErrorParsing(
+        dataServiceDialectsApi.findAll(
+            query:
+                api.FindDialectQuery(memberPublicKey: otherMember.toBase58())));
     if (dialectAccountDtos.length > 1) {
       throw IllegalStateError(
           title: "Found multiple dialects with same members");
@@ -199,12 +206,14 @@ class DataServiceThread extends Thread {
             updatedAt: updatedAt);
   @override
   Future delete() {
-    return dataServiceDialectsApi.delete(publicKey.toBase58());
+    return withErrorParsing(
+        dataServiceDialectsApi.delete(publicKey.toBase58()));
   }
 
   @override
   Future<List<Message>> messages() async {
-    final dialect = await dataServiceDialectsApi.find(publicKey.toBase58());
+    final dialect = await withErrorParsing(
+        dataServiceDialectsApi.find(publicKey.toBase58()));
     updatedAt = DateTime.fromMillisecondsSinceEpoch(
         dialect.dialect.lastMessageTimestamp);
     if (encryptionEnabled && !canBeDecrypted) {
@@ -220,8 +229,9 @@ class DataServiceThread extends Thread {
 
   @override
   Future send(SendMessageCommand command) async {
-    await dataServiceDialectsApi.sendMessage(publicKey.toBase58(),
-        api.SendMessageCommand(serde.serialize(command.text)));
+    await withErrorParsing(dataServiceDialectsApi.sendMessage(
+        publicKey.toBase58(),
+        api.SendMessageCommand(serde.serialize(command.text))));
   }
 }
 

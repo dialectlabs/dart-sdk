@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:dialect_sdk/src/internal/auth/token-utils.dart';
 import 'package:dialect_sdk/src/internal/data-service-api/data-service-api.dart'
     as api;
@@ -14,21 +12,26 @@ import 'package:dialect_sdk/src/wallet-adapter/node-dialect-wallet-adapter.dart'
 import 'package:dialect_sdk/src/web3/api/index_test.dart';
 import 'package:dialect_sdk/src/web3/api/text-serde/text-serde.dart';
 import 'package:dialect_sdk/src/web3/programs.dart';
+import 'package:dialect_sdk/src/web3/utils/index.dart';
 import 'package:solana/solana.dart' as sol;
 import 'package:test/test.dart';
 
 void main() async {
-  final timeout = Timeout(Duration(minutes: 4));
-
-  final List<MessagingMap> messagingMap = [];
-  final solanaMsging = await createSolanaServiceMessaging();
-  messagingMap.add(MessagingMap("SolanaMessaging", solanaMsging));
+  final timeout = Timeout(Duration(minutes: 25));
 
   group('Data service messaging (e2e)', () {
+    final List<MessagingMap> messagingMap = [];
+
+    setUp(() async {
+      messagingMap.add(
+          MessagingMap("DataServiceMessaging", createDataServiceMessaging));
+      messagingMap
+          .add(MessagingMap("SolanaMessaging", createSolanaServiceMessaging));
+    });
     test('can list all threads', () async {
       for (var item in messagingMap) {
         // given
-        final factory = item.state;
+        final factory = await item.state();
         // when
         final threads = await factory.wallet1.messaging.findAll();
         // then
@@ -39,7 +42,7 @@ void main() async {
     test('can create thread', () async {
       for (var item in messagingMap) {
         // given
-        final factory = item.state;
+        final factory = await item.state();
         final before = await factory.wallet1.messaging.findAll();
         expect(before, equals([]));
         // when
@@ -61,7 +64,7 @@ void main() async {
         () async {
       for (var item in messagingMap) {
         // given
-        final factory = item.state;
+        final factory = await item.state();
         final before = await factory.wallet1.messaging.findAll();
         expect(before, equals([]));
         // when
@@ -83,7 +86,7 @@ void main() async {
     test('admin can delete thread', () async {
       for (var item in messagingMap) {
         // given
-        final factory = item.state;
+        final factory = await item.state();
         // when
         final command = CreateThreadCommand(
             me: ThreadMemberPartial(
@@ -99,7 +102,6 @@ void main() async {
             .find(FindThreadByAddressQuery(address: thread.publicKey));
         expect(actual, isNot(equals(null)));
         await thread.delete();
-        sleep(transactionWaitTimeLong);
         final afterDeletion = await factory.wallet2.messaging
             .find(FindThreadByAddressQuery(address: thread.publicKey));
         expect(afterDeletion, equals(null));
@@ -109,7 +111,7 @@ void main() async {
     test('can find all threads after creating', () async {
       for (var item in messagingMap) {
         // given
-        final factory = item.state;
+        final factory = await item.state();
         // when
         final command = CreateThreadCommand(
             me: ThreadMemberPartial(
@@ -121,7 +123,6 @@ void main() async {
             ],
             encrypted: false);
         await factory.wallet1.messaging.create(command);
-        sleep(transactionWaitTimeLong);
         final wallet1Dialects = await factory.wallet1.messaging.findAll();
         final wallet2Dialects = await factory.wallet2.messaging.findAll();
         expect(wallet1Dialects.length, equals(1));
@@ -132,7 +133,7 @@ void main() async {
     test('can send/receive message when thread is unencrypted', () async {
       for (var item in messagingMap) {
         // given
-        final factory = item.state;
+        final factory = await item.state();
         // when
         final command = CreateThreadCommand(
             me: ThreadMemberPartial(
@@ -144,19 +145,17 @@ void main() async {
             ],
             encrypted: false);
         final wallet1Dialect = await factory.wallet1.messaging.create(command);
-        sleep(transactionWaitTimeLong);
         final wallet2Dialect = (await factory.wallet2.messaging.find(
             FindThreadByAddressQuery(address: wallet1Dialect.publicKey)))!;
         await wallet1Dialect.send(SendMessageCommand(text: "Hello world 💬"));
         await wallet2Dialect.send(SendMessageCommand(text: "Hello world"));
-        sleep(transactionWaitTimeMedium);
         // then
         final Set<Message> wallet1Messages =
             Set.from(await wallet1Dialect.messages());
         final Set<Message> wallet2Messages =
             Set.from(await wallet2Dialect.messages());
-        print("W1: ${wallet1Messages.map((e) => "${e.text} ${e.timestamp}")}");
-        print("W2: ${wallet2Messages.map((e) => "${e.text} ${e.timestamp}")}");
+        // print("W1: ${wallet1Messages.map((e) => "${e.text} ${e.timestamp}")}");
+        // print("W2: ${wallet2Messages.map((e) => "${e.text} ${e.timestamp}")}");
         expect(wallet1Messages.length, equals(2));
         expect(wallet2Messages.length, equals(2));
         expect(wallet1Messages.map((e) => e.hashCode),
@@ -164,33 +163,10 @@ void main() async {
       }
     }, timeout: timeout);
 
-    test('test encryption logic', () async {
-      final wallet1 = await NodeDialectWalletAdapter.create();
-      final encryptionProps1 = (await getEncryptionProps(
-          wallet1.publicKey, await wallet1.diffieHellman!()))!;
-      final wallet2 = await NodeDialectWalletAdapter.create();
-      final encryptionProps2 = (await getEncryptionProps(
-          wallet2.publicKey, await wallet2.diffieHellman!()))!;
-
-      final message = "Hello world";
-
-      final serde1 = EncryptedTextSerde(
-          encryptionProps: encryptionProps1,
-          members: [wallet1.publicKey, wallet2.publicKey]);
-      final serde2 = EncryptedTextSerde(
-          encryptionProps: encryptionProps2,
-          members: [wallet1.publicKey, wallet2.publicKey]);
-
-      var encryptedMessage = serde1.serialize(message);
-      var decryptedMessage = serde2.deserialize(encryptedMessage);
-
-      expect(decryptedMessage, equals(message));
-    }, timeout: timeout);
-
     test('can send/receive message when thread is encrypted', () async {
       for (var item in messagingMap) {
         // given
-        final factory = item.state;
+        final factory = await item.state();
         // when
         final command = CreateThreadCommand(
             me: ThreadMemberPartial(
@@ -202,17 +178,15 @@ void main() async {
             ],
             encrypted: true);
         final wallet1Dialect = await factory.wallet1.messaging.create(command);
-        sleep(transactionWaitTimeLong);
         final wallet2Dialect = (await factory.wallet2.messaging.find(
             FindThreadByAddressQuery(address: wallet1Dialect.publicKey)))!;
         final sendMessageCommand = SendMessageCommand(text: "Hello world 💬");
         await wallet1Dialect.send(sendMessageCommand);
-        sleep(transactionWaitTimeMedium);
         // then
         final wallet1Messages = await wallet1Dialect.messages();
         final wallet2Messages = await wallet2Dialect.messages();
-        print("W1: ${wallet1Messages.map((e) => "${e.text} ${e.timestamp}")}");
-        print("W2: ${wallet2Messages.map((e) => "${e.text} ${e.timestamp}")}");
+        // print("W1: ${wallet1Messages.map((e) => "${e.text} ${e.timestamp}")}");
+        // print("W2: ${wallet2Messages.map((e) => "${e.text} ${e.timestamp}")}");
         expect(wallet1Messages.length, equals(1));
         expect(wallet1Messages.first.text, equals(sendMessageCommand.text));
         expect(Set<int>.from(wallet1Messages.map((e) => e.hashCode)),
@@ -225,7 +199,7 @@ void main() async {
         () async {
       for (var item in messagingMap) {
         // given
-        final factory = item.state;
+        final factory = await item.state();
         factory.wallet2.adapter.diffieHellman = null;
         final command = CreateThreadCommand(
             me: ThreadMemberPartial(
@@ -238,12 +212,10 @@ void main() async {
             encrypted: true);
         // when
         final wallet1Dialect = await factory.wallet1.messaging.create(command);
-        sleep(transactionWaitTimeLong);
         final wallet2Dialect = (await factory.wallet2.messaging.find(
             FindThreadByAddressQuery(address: wallet1Dialect.publicKey)))!;
         final sendMessageCommand = SendMessageCommand(text: "Hello world 💬");
         await wallet1Dialect.send(sendMessageCommand);
-        sleep(transactionWaitTimeMedium);
         // then
         expect(wallet1Dialect.encryptionEnabled, equals(true));
         expect(wallet1Dialect.canBeDecrypted, equals(true));
@@ -256,12 +228,35 @@ void main() async {
         expect(wallet2Messages.length, equals(0));
       }
     }, timeout: timeout);
+
+    group('Logic testing', () {
+      test('test encryption logic', () async {
+        final wallet1 = await NodeDialectWalletAdapter.create();
+        final encryptionProps1 = (await getEncryptionProps(
+            wallet1.publicKey, await wallet1.diffieHellman!()))!;
+        final wallet2 = await NodeDialectWalletAdapter.create();
+        final encryptionProps2 = (await getEncryptionProps(
+            wallet2.publicKey, await wallet2.diffieHellman!()))!;
+
+        final message = "Hello world";
+
+        final serde1 = EncryptedTextSerde(
+            encryptionProps: encryptionProps1,
+            members: [wallet1.publicKey, wallet2.publicKey]);
+        final serde2 = EncryptedTextSerde(
+            encryptionProps: encryptionProps2,
+            members: [wallet1.publicKey, wallet2.publicKey]);
+
+        var encryptedMessage = serde1.serialize(message);
+        var decryptedMessage = serde2.deserialize(encryptedMessage);
+
+        expect(decryptedMessage, equals(message));
+      }, timeout: timeout);
+    });
   }, timeout: timeout);
 }
 
 const baseUrl = "http://localhost:8080";
-const transactionWaitTimeLong = Duration(seconds: 20);
-const transactionWaitTimeMedium = Duration(seconds: 10);
 
 Future<MessagingState> createDataServiceMessaging() async {
   final user1Wallet = await NodeDialectWalletAdapter.create();
@@ -294,25 +289,20 @@ Future<MessagingState> createDataServiceMessaging() async {
 }
 
 Future<MessagingState> createSolanaServiceMessaging() async {
-  final wallets = await Future.wait([
-    createSolanaWalletMessagingState(transactionWaitTimeMedium),
-    createSolanaWalletMessagingState(transactionWaitTimeMedium)
-  ]);
+  final wallets = await Future.wait(
+      [createSolanaWalletMessagingState(), createSolanaWalletMessagingState()]);
   return MessagingState(wallets.first, wallets.last);
 }
 
-Future<WalletMessagingState> createSolanaWalletMessagingState(
-    Duration? sleepTime) async {
+Future<WalletMessagingState> createSolanaWalletMessagingState() async {
   final client = sol.RpcClient(programs.localnet.clusterAddress);
   final walletAdapter = DialectWalletAdapterWrapper(
       delegate: await NodeDialectWalletAdapter.create());
-  final program = await createDialectProgram(
+  final program = await createDialectProgram(client,
       sol.Ed25519HDPublicKey.fromBase58(programs.localnet.programAddress));
-  if (sleepTime != null) {
-    await client.requestAirdrop(
-        walletAdapter.publicKey.toBase58(), LAMPORTS_PER_SOL * 100);
-    sleep(sleepTime);
-  }
+  var tx = await client.requestAirdrop(
+      walletAdapter.publicKey.toBase58(), LAMPORTS_PER_SOL * 100);
+  await waitForFinality(client: client, transactionStr: tx);
 
   final userSolanaMessaging =
       SolanaMessaging.createSM(walletAdapter, program, client);
@@ -321,7 +311,7 @@ Future<WalletMessagingState> createSolanaWalletMessagingState(
 
 class MessagingMap {
   String name;
-  MessagingState state;
+  Future<MessagingState> Function() state;
   MessagingMap(this.name, this.state);
 }
 
