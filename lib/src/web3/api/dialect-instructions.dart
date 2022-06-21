@@ -8,7 +8,10 @@ import 'package:solana/solana.dart';
 
 class DialectInstructions {
   static Instruction closeDialect(
-      Ed25519HDPublicKey owner, Ed25519HDPublicKey dialect, int dialectNonce) {
+      Ed25519HDPublicKey owner,
+      Ed25519HDPublicKey dialect,
+      int dialectNonce,
+      Ed25519HDPublicKey dialectProgramId) {
     List<AccountMeta> _keys = [
       AccountMeta(pubKey: owner, isSigner: true, isWriteable: true),
       AccountMeta(pubKey: dialect, isSigner: false, isWriteable: true),
@@ -18,18 +21,21 @@ class DialectInstructions {
           pubKey: SYSTEM_PROGRAM_ID, isSigner: false, isWriteable: false),
     ];
     List<int> data = [
-      ...sha1
+      ...sha256
           .convert(Uint8List.fromList("global:close_dialect".codeUnits))
           .bytes
           .sublist(0, 8),
       dialectNonce
     ];
     return Instruction(
-        programId: DIALECT_PROGRAM_ID, accounts: _keys, data: ByteArray(data));
+        programId: dialectProgramId, accounts: _keys, data: ByteArray(data));
   }
 
   static Instruction closeMetadata(
-      Ed25519HDPublicKey user, Ed25519HDPublicKey metadata, int metadataNonce) {
+      Ed25519HDPublicKey user,
+      Ed25519HDPublicKey metadata,
+      int metadataNonce,
+      Ed25519HDPublicKey dialectProgramId) {
     List<AccountMeta> _keys = [
       AccountMeta(pubKey: user, isSigner: true, isWriteable: true),
       AccountMeta(pubKey: metadata, isSigner: true, isWriteable: false),
@@ -39,14 +45,14 @@ class DialectInstructions {
           pubKey: SYSTEM_PROGRAM_ID, isSigner: false, isWriteable: false),
     ];
     List<int> data = [
-      ...sha1
+      ...sha256
           .convert(Uint8List.fromList("global:create_metadata".codeUnits))
           .bytes
           .sublist(0, 8),
       metadataNonce,
     ];
     return Instruction(
-        programId: DIALECT_PROGRAM_ID, accounts: _keys, data: ByteArray(data));
+        programId: dialectProgramId, accounts: _keys, data: ByteArray(data));
   }
 
   static Instruction createDialect(
@@ -56,7 +62,8 @@ class DialectInstructions {
       Ed25519HDPublicKey dialect,
       int dialectNonce,
       bool encrypted,
-      List<bool> scopes) {
+      List<bool> scopes,
+      Ed25519HDPublicKey dialectProgramId) {
     List<AccountMeta> _keys = [
       AccountMeta(pubKey: owner, isSigner: true, isWriteable: true),
       AccountMeta(pubKey: member0, isSigner: false, isWriteable: false),
@@ -68,7 +75,7 @@ class DialectInstructions {
           pubKey: SYSTEM_PROGRAM_ID, isSigner: false, isWriteable: false),
     ];
     List<int> data = [
-      ...sha1
+      ...sha256
           .convert(Uint8List.fromList("global:create_dialect".codeUnits))
           .bytes
           .sublist(0, 8),
@@ -79,11 +86,14 @@ class DialectInstructions {
       data.addAll([scope ? 1 : 0]);
     }
     return Instruction(
-        programId: DIALECT_PROGRAM_ID, accounts: _keys, data: ByteArray(data));
+        programId: dialectProgramId, accounts: _keys, data: ByteArray(data));
   }
 
   static Instruction createMetadata(
-      Ed25519HDPublicKey user, Ed25519HDPublicKey metadata, int metadataNonce) {
+      Ed25519HDPublicKey user,
+      Ed25519HDPublicKey metadata,
+      int metadataNonce,
+      Ed25519HDPublicKey dialectProgramId) {
     List<AccountMeta> _keys = [
       AccountMeta(pubKey: user, isSigner: true, isWriteable: true),
       AccountMeta(pubKey: metadata, isSigner: true, isWriteable: false),
@@ -93,18 +103,22 @@ class DialectInstructions {
           pubKey: SYSTEM_PROGRAM_ID, isSigner: false, isWriteable: false),
     ];
     List<int> data = [
-      ...sha1
+      ...sha256
           .convert(Uint8List.fromList("global:create_metadata".codeUnits))
           .bytes
           .sublist(0, 8),
       metadataNonce,
     ];
     return Instruction(
-        programId: DIALECT_PROGRAM_ID, accounts: _keys, data: ByteArray(data));
+        programId: dialectProgramId, accounts: _keys, data: ByteArray(data));
   }
 
-  static Instruction sendMessage(Ed25519HDPublicKey sender,
-      Ed25519HDPublicKey dialect, int dialectNonce, List<int> text) {
+  static Instruction sendMessage(
+      Ed25519HDPublicKey sender,
+      Ed25519HDPublicKey dialect,
+      int dialectNonce,
+      List<int> text,
+      Ed25519HDPublicKey dialectProgramId) {
     List<AccountMeta> _keys = [
       AccountMeta(pubKey: sender, isSigner: true, isWriteable: true),
       AccountMeta(pubKey: dialect, isSigner: false, isWriteable: true),
@@ -114,7 +128,7 @@ class DialectInstructions {
           pubKey: SYSTEM_PROGRAM_ID, isSigner: false, isWriteable: false),
     ];
     List<int> data = [
-      ...sha1
+      ...sha256
           .convert(Uint8List.fromList("global:send_message".codeUnits))
           .bytes
           .sublist(0, 8),
@@ -123,7 +137,7 @@ class DialectInstructions {
       ...text
     ];
     return Instruction(
-        programId: DIALECT_PROGRAM_ID, accounts: _keys, data: ByteArray(data));
+        programId: dialectProgramId, accounts: _keys, data: ByteArray(data));
   }
 
   static Instruction subscribeUser(
@@ -134,7 +148,8 @@ class DialectInstructions {
       int dialectNonce,
       int metadataNonce,
       bool encrypted,
-      List<bool> scopes) {
+      List<bool> scopes,
+      Ed25519HDPublicKey dialectProgramId) {
     List<AccountMeta> _keys = [
       AccountMeta(pubKey: signer, isSigner: true, isWriteable: true),
       AccountMeta(pubKey: user, isSigner: false, isWriteable: false),
@@ -146,7 +161,7 @@ class DialectInstructions {
           pubKey: SYSTEM_PROGRAM_ID, isSigner: false, isWriteable: false),
     ];
     List<int> data = [
-      ...sha1
+      ...sha256
           .convert(Uint8List.fromList("global:subscribe_user".codeUnits))
           .bytes
           .sublist(0, 8),
@@ -157,7 +172,7 @@ class DialectInstructions {
       data.addAll([scope ? 1 : 0]);
     }
     return Instruction(
-        programId: DIALECT_PROGRAM_ID, accounts: _keys, data: ByteArray(data));
+        programId: dialectProgramId, accounts: _keys, data: ByteArray(data));
   }
 }
 

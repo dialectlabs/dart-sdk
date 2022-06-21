@@ -1,15 +1,19 @@
-import 'package:dialect_sdk/src/internal/data-service-api/data-service-api.dart';
+import 'package:borsh_annotation/borsh_annotation.dart';
+import 'package:dialect_sdk/src/internal/data-service-api/data-service-api.dart'
+    as api;
+import 'package:dialect_sdk/src/internal/data-service-api/data-service-errors.dart';
 import 'package:dialect_sdk/src/internal/data-service-api/dtos/data-service-dtos.dart';
 import 'package:dialect_sdk/src/internal/encryption/encryption-keys-provider.dart';
 import 'package:dialect_sdk/src/internal/messaging/commons.dart';
+import 'package:dialect_sdk/src/internal/messaging/messaging-errors.dart';
 import 'package:dialect_sdk/src/messaging/messaging.interface.dart';
 import 'package:dialect_sdk/src/sdk/errors.dart';
 import 'package:dialect_sdk/src/sdk/sdk.interface.dart';
 import 'package:dialect_sdk/src/web3/api/text-serde/text-serde.dart';
 import 'package:dialect_sdk/src/web3/utils/encryption/ecdh-encryption.dart';
-import 'package:solana/solana.dart';
+import 'package:solana/solana.dart' as sol;
 
-MemberDto? findMember(Ed25519HDPublicKey memberPk, DialectDto dialect) {
+MemberDto? findMember(sol.Ed25519HDPublicKey memberPk, DialectDto dialect) {
   try {
     return dialect.members
         .map((element) => element)
@@ -19,7 +23,8 @@ MemberDto? findMember(Ed25519HDPublicKey memberPk, DialectDto dialect) {
   }
 }
 
-MemberDto? findOtherMember(Ed25519HDPublicKey memberPk, DialectDto dialect) {
+MemberDto? findOtherMember(
+    sol.Ed25519HDPublicKey memberPk, DialectDto dialect) {
   try {
     return dialect.members
         .map((element) => element)
@@ -46,8 +51,8 @@ List<MemberScopeDto> toDataServiceScopes(List<ThreadMemberScope> scopes) {
 }
 
 class DataServiceMessaging implements Messaging {
-  final Ed25519HDPublicKey me;
-  final DataServiceDialectsApi dataServiceDialectsApi;
+  final sol.Ed25519HDPublicKey me;
+  final api.DataServiceDialectsApi dataServiceDialectsApi;
   final EncryptionKeysProvider encryptionKeysProvider;
   DataServiceMessaging(
       {required this.me,
@@ -62,15 +67,16 @@ class DataServiceMessaging implements Messaging {
   Future<Thread> create(CreateThreadCommand command) async {
     command.encrypted && ((await checkEncryptionSupported()) != null);
     final otherMember = requireSingleMember(command.otherMembers);
-    final dialectAccountDto =
-        await dataServiceDialectsApi.create(CreateDialectCommand(members: [
-      PostMemberDto(
-          publicKey: me.toBase58(),
-          scopes: toDataServiceScopes(command.me.scopes)),
-      PostMemberDto(
-          publicKey: otherMember.publicKey.toBase58(),
-          scopes: toDataServiceScopes(otherMember.scopes))
-    ], encrypted: command.encrypted));
+    final dialectAccountDto = await withErrorParsing(
+        dataServiceDialectsApi.create(CreateDialectCommand(members: [
+          PostMemberDto(
+              publicKey: me.toBase58(),
+              scopes: toDataServiceScopes(command.me.scopes)),
+          PostMemberDto(
+              publicKey: otherMember.publicKey.toBase58(),
+              scopes: toDataServiceScopes(otherMember.scopes))
+        ], encrypted: command.encrypted)),
+        onResourceAlreadyExists: (e) => ThreadAlreadyExistsError());
     return _toDataServiceThread(dialectAccountDto);
   }
 
@@ -92,21 +98,58 @@ class DataServiceMessaging implements Messaging {
         EncryptedTextSerde(
             encryptionProps: encryptionProps,
             members: dialect.members
-                .map((e) => Ed25519HDPublicKey.fromBase58(e.publicKey))
+                .map((e) => sol.Ed25519HDPublicKey.fromBase58(e.publicKey))
                 .toList()),
         true);
   }
 
   @override
-  Future<Thread?> find(FindThreadQuery query) {
-    // TODO: implement find
-    throw UnimplementedError();
+  Future<Thread?> find(FindThreadQuery query) async {
+    final dialectAccountDto = await _findInternal(query);
+    return dialectAccountDto != null
+        ? _toDataServiceThread(dialectAccountDto)
+        : null;
   }
 
   @override
-  Future<List<Thread>> findAll() {
-    // TODO: implement findAll
-    throw UnimplementedError();
+  Future<List<Thread>> findAll() async {
+    final dialectAccountDtos =
+        await withErrorParsing(dataServiceDialectsApi.findAll());
+    return Future.wait(dialectAccountDtos.map((e) => _toDataServiceThread(e)));
+  }
+
+  Future<DialectAccountDto?> _findByAddress(
+      FindThreadByAddressQuery query) async {
+    try {
+      return await withErrorParsing(
+          dataServiceDialectsApi.find(query.address.toBase58()));
+    } catch (e) {
+      if (e is ResourceNotFoundError) {
+        return null;
+      }
+      rethrow;
+    }
+  }
+
+  Future<DialectAccountDto?> _findByOtherMember(
+      FindThreadByOtherMemberQuery query) async {
+    final otherMember = requireSingleMember(query.otherMembers);
+    final dialectAccountDtos = await withErrorParsing(
+        dataServiceDialectsApi.findAll(
+            query:
+                api.FindDialectQuery(memberPublicKey: otherMember.toBase58())));
+    if (dialectAccountDtos.length > 1) {
+      throw IllegalStateError(
+          title: "Found multiple dialects with same members");
+    }
+    return dialectAccountDtos[0];
+  }
+
+  Future<DialectAccountDto?> _findInternal(FindThreadQuery query) {
+    if (query.isAddress()) {
+      return _findByAddress(query as FindThreadByAddressQuery);
+    }
+    return _findByOtherMember(query as FindThreadByOtherMemberQuery);
   }
 
   Future<DataServiceThread> _toDataServiceThread(
@@ -120,15 +163,15 @@ class DataServiceMessaging implements Messaging {
     }
     final serde = await createTextSerde(dialectAccountDto.dialect);
     final otherThreadMember = ThreadMember(
-        publicKey: Ed25519HDPublicKey.fromBase58(otherMember.publicKey),
+        publicKey: sol.Ed25519HDPublicKey.fromBase58(otherMember.publicKey),
         scopes: fromDataServiceScopes(otherMember.scopes));
     return DataServiceThread(
         dataServiceDialectsApi: dataServiceDialectsApi,
         serde: serde.textSerde,
         me: ThreadMember(
-            publicKey: Ed25519HDPublicKey.fromBase58(meMember.publicKey),
+            publicKey: sol.Ed25519HDPublicKey.fromBase58(meMember.publicKey),
             scopes: fromDataServiceScopes(meMember.scopes)),
-        address: Ed25519HDPublicKey.fromBase58(dialectAccountDto.publicKey),
+        address: sol.Ed25519HDPublicKey.fromBase58(dialectAccountDto.publicKey),
         otherMembers: [otherThreadMember],
         otherMember: otherThreadMember,
         encryptionEnabled: dialectAccountDto.dialect.encrypted,
@@ -139,16 +182,17 @@ class DataServiceMessaging implements Messaging {
 }
 
 class DataServiceThread extends Thread {
-  final DataServiceDialectsApi dataServiceDialectsApi;
+  final api.DataServiceDialectsApi dataServiceDialectsApi;
   final TextSerde serde;
+  final ThreadMember otherMember;
 
   DataServiceThread(
       {required this.dataServiceDialectsApi,
       required this.serde,
       required ThreadMember me,
-      required Ed25519HDPublicKey address,
+      required sol.Ed25519HDPublicKey address,
       required List<ThreadMember> otherMembers,
-      required ThreadMember otherMember,
+      required this.otherMember,
       required bool encryptionEnabled,
       required bool canBeDecrypted,
       required DateTime updatedAt})
@@ -160,6 +204,35 @@ class DataServiceThread extends Thread {
             canBeDecrypted: canBeDecrypted,
             backend: Backend.dialectCloud,
             updatedAt: updatedAt);
+  @override
+  Future delete() {
+    return withErrorParsing(
+        dataServiceDialectsApi.delete(publicKey.toBase58()));
+  }
+
+  @override
+  Future<List<Message>> messages() async {
+    final dialect = await withErrorParsing(
+        dataServiceDialectsApi.find(publicKey.toBase58()));
+    updatedAt = DateTime.fromMillisecondsSinceEpoch(
+        dialect.dialect.lastMessageTimestamp);
+    if (encryptionEnabled && !canBeDecrypted) {
+      return [];
+    }
+    return dialect.dialect.messages
+        .map((e) => Message(
+            text: serde.deserialize(Uint8List.fromList(e.text)),
+            timestamp: DateTime.fromMillisecondsSinceEpoch(e.timestamp),
+            author: e.owner == me.publicKey.toBase58() ? me : otherMember))
+        .toList();
+  }
+
+  @override
+  Future send(SendMessageCommand command) async {
+    await withErrorParsing(dataServiceDialectsApi.sendMessage(
+        publicKey.toBase58(),
+        api.SendMessageCommand(serde.serialize(command.text))));
+  }
 }
 
 class TextSerdeResult {

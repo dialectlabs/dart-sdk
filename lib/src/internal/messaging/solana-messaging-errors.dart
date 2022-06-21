@@ -1,7 +1,8 @@
 import 'package:dialect_sdk/src/sdk/errors.dart';
 
-parseError(DialectSdkError error) {
+SolanaError parseError(DialectSdkError error) {
   final message = error.message;
+
   if (message == null) {
     throw UnknownError(details: [error]);
   }
@@ -33,7 +34,7 @@ Future<T> withErrorParsing<T>(Future<T> future) async {
 
 class AccountAlreadyExistsError extends SolanaError {
   static List<RegExp> matchers = [
-    RegExp(r'^already in use$'),
+    RegExp(r'already in use'),
   ];
 
   AccountAlreadyExistsError({List<dynamic>? details})
@@ -46,7 +47,7 @@ class AccountAlreadyExistsError extends SolanaError {
 
 class AccountNotFoundError extends SolanaError {
   static List<RegExp> matchers = [
-    RegExp(r'^Account does not exist$'),
+    RegExp(r'Account does not exist'),
   ];
 
   AccountNotFoundError({List<dynamic>? details})
@@ -59,7 +60,7 @@ class AccountNotFoundError extends SolanaError {
 
 class DisconnectedFromChainError extends SolanaError {
   static List<RegExp> matchers = [
-    RegExp(r'^Network request failed$'),
+    RegExp(r'Network request failed'),
   ];
 
   DisconnectedFromChainError({List<dynamic>? details})
@@ -74,7 +75,7 @@ class DisconnectedFromChainError extends SolanaError {
 class InsufficientFundsError extends SolanaError {
   static List<RegExp> matchers = [
     RegExp(
-        r'^Attempt to debit an account but found no record of a prior credit$'),
+        r'Attempt to debit an account but found no record of a prior credit'),
     RegExp(r'(0x1)$', multiLine: true)
   ];
 
@@ -89,7 +90,7 @@ class InsufficientFundsError extends SolanaError {
 
 class NotSignedError extends SolanaError {
   static List<RegExp> matchers = [
-    RegExp(r'^User rejected the request$'),
+    RegExp(r'User rejected the request'),
   ];
 
   NotSignedError({List<dynamic>? details})

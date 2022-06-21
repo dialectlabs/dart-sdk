@@ -1,4 +1,4 @@
-import 'dart:ui';
+import 'dart:convert';
 
 import 'package:json_annotation/json_annotation.dart';
 
@@ -40,7 +40,7 @@ class DialectDto {
   @JsonKey(name: "nextMessageIdx")
   final num nextMessageIdx;
   @JsonKey(name: "lastMessageTimestamp")
-  final num lastMessageTimestamp;
+  final int lastMessageTimestamp;
   @JsonKey(name: "encrypted")
   final bool encrypted;
 
@@ -64,9 +64,9 @@ class DialectDto {
             .map((m) => MemberDto(publicKey: m.publicKey, scopes: m.scopes))
             .toList();
 
+  @JsonKey(ignore: true)
   @override
-  int get hashCode => hashValues(hashList(members), hashList(messages),
-      nextMessageIdx, encrypted, lastMessageTimestamp);
+  int get hashCode => JsonEncoder().convert(toJson()).hashCode;
 
   @override
   bool operator ==(covariant DialectDto other) {
@@ -82,7 +82,7 @@ class DialectDto {
 
 @JsonSerializable(explicitToJson: true)
 class MemberDto {
-  @JsonKey(name: "encrypted")
+  @JsonKey(name: "publicKey")
   final String publicKey;
   @JsonKey(name: "scopes")
   final List<MemberScopeDto> scopes;
@@ -91,8 +91,10 @@ class MemberDto {
 
   factory MemberDto.fromJson(Map<String, dynamic> json) =>
       _$MemberDtoFromJson(json);
+
+  @JsonKey(ignore: true)
   @override
-  int get hashCode => hashValues(hashList(scopes), publicKey);
+  int get hashCode => JsonEncoder().convert(toJson()).hashCode;
 
   @override
   bool operator ==(covariant MemberDto other) {
@@ -119,9 +121,9 @@ class MessageDto {
   @JsonKey(name: "owner")
   final String owner;
   @JsonKey(name: "text")
-  final List<num> text;
+  final List<int> text;
   @JsonKey(name: "timestamp")
-  final num timestamp;
+  final int timestamp;
 
   MessageDto(
       {required this.owner, required this.text, required this.timestamp});
@@ -142,8 +144,9 @@ class PostMemberDto {
   factory PostMemberDto.fromJson(Map<String, dynamic> json) =>
       _$PostMemberDtoFromJson(json);
 
+  @JsonKey(ignore: true)
   @override
-  int get hashCode => hashValues(publicKey, hashList(scopes));
+  int get hashCode => JsonEncoder().convert(toJson()).hashCode;
 
   @override
   bool operator ==(covariant PostMemberDto other) {

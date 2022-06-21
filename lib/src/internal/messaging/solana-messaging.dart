@@ -15,14 +15,14 @@ import 'package:solana/dto.dart';
 import 'package:solana/solana.dart';
 
 Member? findMember(Ed25519HDPublicKey memberPk, Dialect dialect) {
-  var members = dialect.members
-      .where((element) => element.publicKey == memberPk.toBase58());
+  var members =
+      dialect.members.where((element) => element.publicKey == memberPk);
   return members.isEmpty ? null : members.first;
 }
 
 Member? findOtherMember(Ed25519HDPublicKey memberPk, Dialect dialect) {
-  var members = dialect.members
-      .where((element) => element.publicKey != memberPk.toBase58());
+  var members =
+      dialect.members.where((element) => element.publicKey != memberPk);
   return members.isEmpty ? null : members.first;
 }
 
@@ -37,7 +37,7 @@ Future<EncryptionProps?> getEncryptionProps(
     Ed25519HDPublicKey me, DiffieHellmanKeys? encryptionKeys) async {
   return encryptionKeys != null
       ? EncryptionProps(me,
-          Curve25519KeyPair(encryptionKeys.publicKey, encryptionKeys.publicKey))
+          Curve25519KeyPair(encryptionKeys.publicKey, encryptionKeys.secretKey))
       : null;
 }
 
@@ -67,6 +67,7 @@ Future<SolanaThread> toSolanaThread(
   final canBeDecrypted = dialect.encrypted
       ? (await encryptionKeysProvider.getFailSafe()) != null
       : true;
+
   final otherThreadMember = msg.ThreadMember(
       publicKey: otherMember.publicKey,
       scopes: fromProtocolScopes(
@@ -108,16 +109,16 @@ class SolanaMessaging implements msg.Messaging {
         client, dialectAccount, walletAdapter, encryptionKeysProvider, program);
   }
 
-  createInternal(msg.CreateThreadCommand command) async {
+  Future<DialectAccount> createInternal(msg.CreateThreadCommand command) async {
     final otherMember = requireSingleMember(command.otherMembers);
     try {
       return await withErrorParsing(createDialect(
           client: client,
           program: program,
-          owner: KeypairWallet.fromWallet(walletAdapter.publicKey),
+          owner: KeypairWallet.fromWalletAdapterWrapper(walletAdapter),
           members: [
             Member(
-                publicKey: walletAdapter.publicKey,
+                publicKey: walletAdapter.delegate.publicKey,
                 scopes: toProtocolScopes(command.me.scopes)),
             Member(
                 publicKey: otherMember.publicKey,
@@ -126,9 +127,10 @@ class SolanaMessaging implements msg.Messaging {
           encrypted: command.encrypted,
           encryptionProps: await _getEncryptionProps(command)));
     } catch (e) {
-      final err = e as SolanaError;
-      if (err.type == 'AccountAlreadyExistsError') {
+      if (e is SolanaError && e.type == 'AccountAlreadyExistsError') {
         throw ThreadAlreadyExistsError();
+      } else if (e is DialectSdkError) {
+        print("${e.type} | ${e.title} ${e.message} ${e.details}");
       }
       rethrow;
     }
@@ -157,26 +159,23 @@ class SolanaMessaging implements msg.Messaging {
         await getEncryptionProps(walletAdapter.publicKey, encryptionKeys);
     try {
       if (query is msg.FindThreadByAddressQuery) {
-        return _findByAddress(query, encryptionProps);
+        return await _findByAddress(query, encryptionProps);
       }
-      return _findByOtherMember(
+      return await _findByOtherMember(
           query as msg.FindThreadByOtherMemberQuery, encryptionProps);
-    } catch (e) {
-      final err = e as SolanaError;
-      if (err.type == "AccountNotFoundError") {
-        return null;
-      }
-      rethrow;
+    } on AccountNotFoundError {
+      return null;
     }
   }
 
-  _findByAddress(msg.FindThreadByAddressQuery query,
+  Future<DialectAccount> _findByAddress(msg.FindThreadByAddressQuery query,
       EncryptionProps? encryptionProps) async {
     return withErrorParsing(
         getDialect(client, program, query.address, encryptionProps));
   }
 
-  _findByOtherMember(msg.FindThreadByOtherMemberQuery query,
+  Future<DialectAccount> _findByOtherMember(
+      msg.FindThreadByOtherMemberQuery query,
       EncryptionProps? encryptionProps) async {
     final otherMember = requireSingleMember(query.otherMembers);
     return withErrorParsing(getDialectForMembers(client, program,
@@ -237,11 +236,13 @@ class SolanaThread extends msg.Thread {
         dialectAccount.dialect.lastMessageTimestamp.round());
   }
 
+  @override
   Future delete() async {
     await deleteDialect(client, program, dialectAccount,
-        KeypairWallet.fromWallet(walletAdapter.publicKey));
+        KeypairWallet.fromWalletAdapterWrapper(walletAdapter));
   }
 
+  @override
   Future<List<msg.Message>> messages() async {
     final encryptionKeys = await encryptionKeysProvider.getFailSafe();
     final encryptionProps =
@@ -256,6 +257,7 @@ class SolanaThread extends msg.Thread {
         .toList();
   }
 
+  @override
   Future send(msg.SendMessageCommand command) async {
     final encryptionKeys = await encryptionKeysProvider.getFailFast();
     final encryptionProps =
@@ -264,7 +266,7 @@ class SolanaThread extends msg.Thread {
         client,
         program,
         dialectAccount,
-        KeypairWallet.fromWallet(walletAdapter.publicKey),
+        KeypairWallet.fromWalletAdapterWrapper(walletAdapter),
         command.text,
         encryptionProps);
   }

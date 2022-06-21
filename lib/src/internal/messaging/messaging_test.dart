@@ -1,5 +1,6 @@
 import 'package:dialect_sdk/src/internal/auth/token-utils.dart';
-import 'package:dialect_sdk/src/internal/data-service-api/data-service-api.dart';
+import 'package:dialect_sdk/src/internal/data-service-api/data-service-api.dart'
+    as api;
 import 'package:dialect_sdk/src/internal/data-service-api/token-provider.dart';
 import 'package:dialect_sdk/src/internal/encryption/encryption-keys-provider.dart';
 import 'package:dialect_sdk/src/internal/messaging/data-service-messaging.dart';
@@ -9,25 +10,250 @@ import 'package:dialect_sdk/src/messaging/messaging.interface.dart';
 import 'package:dialect_sdk/src/wallet-adapter/dialect-wallet-adapter-wrapper.dart';
 import 'package:dialect_sdk/src/wallet-adapter/node-dialect-wallet-adapter.dart';
 import 'package:dialect_sdk/src/web3/api/index_test.dart';
+import 'package:dialect_sdk/src/web3/api/text-serde/text-serde.dart';
 import 'package:dialect_sdk/src/web3/programs.dart';
-import 'package:solana/solana.dart';
+import 'package:dialect_sdk/src/web3/utils/index.dart';
+import 'package:solana/solana.dart' as sol;
 import 'package:test/test.dart';
 
-void main() {
-  group('Data service messaging (e2e)', () {
-    final messagingMap = [
-      MessagingMap("DataServiceMessaging", () => createDataServiceMessaging()),
-      MessagingMap("SolanaMessaging", () => createSolanaServiceMessaging())
-    ];
+void main() async {
+  final timeout = Timeout(Duration(minutes: 25));
 
+  group('Data service messaging (e2e)', () {
+    final List<MessagingMap> messagingMap = [];
+
+    setUp(() async {
+      messagingMap.add(
+          MessagingMap("DataServiceMessaging", createDataServiceMessaging));
+      messagingMap
+          .add(MessagingMap("SolanaMessaging", createSolanaServiceMessaging));
+    });
     test('can list all threads', () async {
       for (var item in messagingMap) {
-        final factory = await item.func();
-        final threads = factory.wallet1.messaging.findAll();
+        // given
+        final factory = await item.state();
+        // when
+        final threads = await factory.wallet1.messaging.findAll();
+        // then
         expect(threads, equals([]));
       }
+    }, timeout: timeout);
+
+    test('can create thread', () async {
+      for (var item in messagingMap) {
+        // given
+        final factory = await item.state();
+        final before = await factory.wallet1.messaging.findAll();
+        expect(before, equals([]));
+        // when
+        final command = CreateThreadCommand(
+            me: ThreadMemberPartial(
+                scopes: [ThreadMemberScope.admin, ThreadMemberScope.write]),
+            otherMembers: [
+              ThreadMember(
+                  publicKey: factory.wallet2.adapter.publicKey,
+                  scopes: [ThreadMemberScope.admin, ThreadMemberScope.write])
+            ],
+            encrypted: false);
+        final thread = await factory.wallet1.messaging.create(command);
+        expect(thread, isNot(equals(null)));
+      }
+    }, timeout: timeout);
+
+    test('cannot create encrypted thread if encryption not supported',
+        () async {
+      for (var item in messagingMap) {
+        // given
+        final factory = await item.state();
+        final before = await factory.wallet1.messaging.findAll();
+        expect(before, equals([]));
+        // when
+        final command = CreateThreadCommand(
+            me: ThreadMemberPartial(
+                scopes: [ThreadMemberScope.admin, ThreadMemberScope.write]),
+            otherMembers: [
+              ThreadMember(
+                  publicKey: factory.wallet2.adapter.publicKey,
+                  scopes: [ThreadMemberScope.admin, ThreadMemberScope.write])
+            ],
+            encrypted: true);
+        factory.wallet1.adapter.diffieHellman = null;
+        await expectLater(
+            factory.wallet1.messaging.create(command), throwsException);
+      }
+    }, timeout: timeout);
+
+    test('admin can delete thread', () async {
+      for (var item in messagingMap) {
+        // given
+        final factory = await item.state();
+        // when
+        final command = CreateThreadCommand(
+            me: ThreadMemberPartial(
+                scopes: [ThreadMemberScope.admin, ThreadMemberScope.write]),
+            otherMembers: [
+              ThreadMember(
+                  publicKey: factory.wallet2.adapter.publicKey,
+                  scopes: [ThreadMemberScope.admin, ThreadMemberScope.write])
+            ],
+            encrypted: false);
+        final thread = await factory.wallet1.messaging.create(command);
+        final actual = await factory.wallet2.messaging
+            .find(FindThreadByAddressQuery(address: thread.publicKey));
+        expect(actual, isNot(equals(null)));
+        await thread.delete();
+        final afterDeletion = await factory.wallet2.messaging
+            .find(FindThreadByAddressQuery(address: thread.publicKey));
+        expect(afterDeletion, equals(null));
+      }
+    }, timeout: timeout);
+
+    test('can find all threads after creating', () async {
+      for (var item in messagingMap) {
+        // given
+        final factory = await item.state();
+        // when
+        final command = CreateThreadCommand(
+            me: ThreadMemberPartial(
+                scopes: [ThreadMemberScope.admin, ThreadMemberScope.write]),
+            otherMembers: [
+              ThreadMember(
+                  publicKey: factory.wallet2.adapter.publicKey,
+                  scopes: [ThreadMemberScope.admin, ThreadMemberScope.write])
+            ],
+            encrypted: false);
+        await factory.wallet1.messaging.create(command);
+        final wallet1Dialects = await factory.wallet1.messaging.findAll();
+        final wallet2Dialects = await factory.wallet2.messaging.findAll();
+        expect(wallet1Dialects.length, equals(1));
+        expect(wallet2Dialects.length, equals(1));
+      }
+    }, timeout: timeout);
+
+    test('can send/receive message when thread is unencrypted', () async {
+      for (var item in messagingMap) {
+        // given
+        final factory = await item.state();
+        // when
+        final command = CreateThreadCommand(
+            me: ThreadMemberPartial(
+                scopes: [ThreadMemberScope.admin, ThreadMemberScope.write]),
+            otherMembers: [
+              ThreadMember(
+                  publicKey: factory.wallet2.adapter.publicKey,
+                  scopes: [ThreadMemberScope.admin, ThreadMemberScope.write])
+            ],
+            encrypted: false);
+        final wallet1Dialect = await factory.wallet1.messaging.create(command);
+        final wallet2Dialect = (await factory.wallet2.messaging.find(
+            FindThreadByAddressQuery(address: wallet1Dialect.publicKey)))!;
+        await wallet1Dialect.send(SendMessageCommand(text: "Hello world 💬"));
+        await wallet2Dialect.send(SendMessageCommand(text: "Hello world"));
+        // then
+        final Set<Message> wallet1Messages =
+            Set.from(await wallet1Dialect.messages());
+        final Set<Message> wallet2Messages =
+            Set.from(await wallet2Dialect.messages());
+        // print("W1: ${wallet1Messages.map((e) => "${e.text} ${e.timestamp}")}");
+        // print("W2: ${wallet2Messages.map((e) => "${e.text} ${e.timestamp}")}");
+        expect(wallet1Messages.length, equals(2));
+        expect(wallet2Messages.length, equals(2));
+        expect(wallet1Messages.map((e) => e.hashCode),
+            equals(wallet2Messages.map((e) => e.hashCode)));
+      }
+    }, timeout: timeout);
+
+    test('can send/receive message when thread is encrypted', () async {
+      for (var item in messagingMap) {
+        // given
+        final factory = await item.state();
+        // when
+        final command = CreateThreadCommand(
+            me: ThreadMemberPartial(
+                scopes: [ThreadMemberScope.admin, ThreadMemberScope.write]),
+            otherMembers: [
+              ThreadMember(
+                  publicKey: factory.wallet2.adapter.publicKey,
+                  scopes: [ThreadMemberScope.admin, ThreadMemberScope.write])
+            ],
+            encrypted: true);
+        final wallet1Dialect = await factory.wallet1.messaging.create(command);
+        final wallet2Dialect = (await factory.wallet2.messaging.find(
+            FindThreadByAddressQuery(address: wallet1Dialect.publicKey)))!;
+        final sendMessageCommand = SendMessageCommand(text: "Hello world 💬");
+        await wallet1Dialect.send(sendMessageCommand);
+        // then
+        final wallet1Messages = await wallet1Dialect.messages();
+        final wallet2Messages = await wallet2Dialect.messages();
+        // print("W1: ${wallet1Messages.map((e) => "${e.text} ${e.timestamp}")}");
+        // print("W2: ${wallet2Messages.map((e) => "${e.text} ${e.timestamp}")}");
+        expect(wallet1Messages.length, equals(1));
+        expect(wallet1Messages.first.text, equals(sendMessageCommand.text));
+        expect(Set<int>.from(wallet1Messages.map((e) => e.hashCode)),
+            equals(Set<int>.from(wallet2Messages.map((e) => e.hashCode))));
+      }
+    }, timeout: timeout);
+
+    test(
+        'can send message, but cannot read it if wallet does not support encryption',
+        () async {
+      for (var item in messagingMap) {
+        // given
+        final factory = await item.state();
+        factory.wallet2.adapter.diffieHellman = null;
+        final command = CreateThreadCommand(
+            me: ThreadMemberPartial(
+                scopes: [ThreadMemberScope.admin, ThreadMemberScope.write]),
+            otherMembers: [
+              ThreadMember(
+                  publicKey: factory.wallet2.adapter.publicKey,
+                  scopes: [ThreadMemberScope.admin, ThreadMemberScope.write])
+            ],
+            encrypted: true);
+        // when
+        final wallet1Dialect = await factory.wallet1.messaging.create(command);
+        final wallet2Dialect = (await factory.wallet2.messaging.find(
+            FindThreadByAddressQuery(address: wallet1Dialect.publicKey)))!;
+        final sendMessageCommand = SendMessageCommand(text: "Hello world 💬");
+        await wallet1Dialect.send(sendMessageCommand);
+        // then
+        expect(wallet1Dialect.encryptionEnabled, equals(true));
+        expect(wallet1Dialect.canBeDecrypted, equals(true));
+        final wallet1Messages = await wallet1Dialect.messages();
+        final wallet2Messages = await wallet2Dialect.messages();
+        expect(wallet2Dialect.encryptionEnabled, equals(true));
+        expect(wallet2Dialect.canBeDecrypted, equals(false));
+        expect(wallet1Messages.length, equals(1));
+        expect(wallet1Messages.first.text, equals(sendMessageCommand.text));
+        expect(wallet2Messages.length, equals(0));
+      }
+    }, timeout: timeout);
+
+    group('Logic testing', () {
+      test('test encryption logic', () async {
+        final wallet1 = await NodeDialectWalletAdapter.create();
+        final encryptionProps1 = (await getEncryptionProps(
+            wallet1.publicKey, await wallet1.diffieHellman!()))!;
+        final wallet2 = await NodeDialectWalletAdapter.create();
+        final encryptionProps2 = (await getEncryptionProps(
+            wallet2.publicKey, await wallet2.diffieHellman!()))!;
+
+        final message = "Hello world";
+
+        final serde1 = EncryptedTextSerde(
+            encryptionProps: encryptionProps1,
+            members: [wallet1.publicKey, wallet2.publicKey]);
+        final serde2 = EncryptedTextSerde(
+            encryptionProps: encryptionProps2,
+            members: [wallet1.publicKey, wallet2.publicKey]);
+
+        var encryptedMessage = serde1.serialize(message);
+        var decryptedMessage = serde2.deserialize(encryptedMessage);
+
+        expect(decryptedMessage, equals(message));
+      }, timeout: timeout);
     });
-  });
+  }, timeout: timeout);
 }
 
 const baseUrl = "http://localhost:8080";
@@ -39,7 +265,7 @@ Future<MessagingState> createDataServiceMessaging() async {
   final user2WalletAdapter = DialectWalletAdapterWrapper(delegate: user2Wallet);
   final user1DataServiceMessaging = DataServiceMessaging(
       me: user1WalletAdapter.publicKey,
-      dataServiceDialectsApi: (DataServiceApi.create(
+      dataServiceDialectsApi: (api.DataServiceApi.create(
               baseUrl,
               TokenProvider.create(
                   signer: DialectWalletAdapterEd25519TokenSigner(
@@ -49,7 +275,7 @@ Future<MessagingState> createDataServiceMessaging() async {
           dialectWalletAdapter: user1WalletAdapter));
   final user2DataServiceMessaging = DataServiceMessaging(
       me: user2WalletAdapter.publicKey,
-      dataServiceDialectsApi: (DataServiceApi.create(
+      dataServiceDialectsApi: (api.DataServiceApi.create(
               baseUrl,
               TokenProvider.create(
                   signer: DialectWalletAdapterEd25519TokenSigner(
@@ -69,16 +295,15 @@ Future<MessagingState> createSolanaServiceMessaging() async {
 }
 
 Future<WalletMessagingState> createSolanaWalletMessagingState() async {
+  final client = sol.RpcClient(programs.localnet.clusterAddress);
   final walletAdapter = DialectWalletAdapterWrapper(
       delegate: await NodeDialectWalletAdapter.create());
-  final program = await createDialectProgram(
-      walletAdapter,
-      Ed25519HDPublicKey.fromBase58(programs.localnet.programAddress),
-      programs.localnet.clusterAddress);
-  final client = RpcClient(programs.localnet.clusterAddress);
-  final airdropRequest = await client.requestAirdrop(
+  final program = await createDialectProgram(client,
+      sol.Ed25519HDPublicKey.fromBase58(programs.localnet.programAddress));
+  var tx = await client.requestAirdrop(
       walletAdapter.publicKey.toBase58(), LAMPORTS_PER_SOL * 100);
-  await client.getTransaction(airdropRequest);
+  await waitForFinality(client: client, transactionStr: tx);
+
   final userSolanaMessaging =
       SolanaMessaging.createSM(walletAdapter, program, client);
   return WalletMessagingState(walletAdapter, userSolanaMessaging);
@@ -86,8 +311,8 @@ Future<WalletMessagingState> createSolanaWalletMessagingState() async {
 
 class MessagingMap {
   String name;
-  Future<MessagingState> Function() func;
-  MessagingMap(this.name, this.func);
+  Future<MessagingState> Function() state;
+  MessagingMap(this.name, this.state);
 }
 
 class MessagingState {

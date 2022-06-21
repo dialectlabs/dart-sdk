@@ -26,15 +26,38 @@ class FindThreadByAddressQuery implements FindThreadQuery {
   Ed25519HDPublicKey address;
 
   FindThreadByAddressQuery({required this.address});
+
+  @override
+  bool isAddress() {
+    return true;
+  }
+
+  @override
+  bool isOtherMember() {
+    return false;
+  }
 }
 
 class FindThreadByOtherMemberQuery implements FindThreadQuery {
   List<Ed25519HDPublicKey> otherMembers;
 
   FindThreadByOtherMemberQuery({required this.otherMembers});
+
+  @override
+  bool isAddress() {
+    return false;
+  }
+
+  @override
+  bool isOtherMember() {
+    return true;
+  }
 }
 
-abstract class FindThreadQuery {}
+abstract class FindThreadQuery {
+  bool isAddress();
+  bool isOtherMember();
+}
 
 class Message {
   String text;
@@ -42,6 +65,13 @@ class Message {
   ThreadMember author;
 
   Message({required this.text, required this.timestamp, required this.author});
+
+  @override
+  int get hashCode => Object.hashAll([text, timestamp, author.publicKey]);
+
+  @override
+  bool operator ==(covariant DialectCloudEnvironment other) =>
+      other.hashCode == hashCode;
 }
 
 abstract class Messaging {
@@ -79,6 +109,18 @@ class Thread {
       required this.canBeDecrypted,
       required this.backend,
       required this.updatedAt});
+
+  Future delete() {
+    throw UnimplementedError();
+  }
+
+  Future<List<Message>> messages() {
+    throw UnimplementedError();
+  }
+
+  Future send(SendMessageCommand command) {
+    throw UnimplementedError();
+  }
 }
 
 @JsonSerializable(explicitToJson: true)

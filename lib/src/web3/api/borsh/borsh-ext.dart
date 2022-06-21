@@ -1,5 +1,24 @@
 import 'package:borsh_annotation/borsh_annotation.dart';
+import 'package:crypto/crypto.dart';
+import 'package:recase/recase.dart';
+import 'package:solana/dto.dart';
 import 'package:solana/solana.dart';
+
+const ACCOUNT_DISCRIMINATOR_SIZE = 8;
+
+Uint8List accountDiscriminator(String name) {
+  final camelCaseName = ReCase(name).camelCase;
+  final str =
+      sha256.convert(Uint8List.fromList("account:$camelCaseName".codeUnits));
+  return Uint8List.fromList(str.bytes.sublist(0, ACCOUNT_DISCRIMINATOR_SIZE));
+}
+
+T parseBytesFromAccount<T>(Account? account, T Function(Uint8List) convert,
+    {int skip = 8}) {
+  final accountData = (account?.data as BinaryAccountData).data;
+  final data = Uint8List.fromList(accountData);
+  return convert(data.sublist(skip));
+}
 
 class BBool extends BType<bool> {
   const BBool();

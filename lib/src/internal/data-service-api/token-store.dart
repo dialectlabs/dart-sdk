@@ -26,7 +26,9 @@ class SessionStorageTokenStore extends TokenStore {
     final prefs = await SharedPreferences.getInstance();
     try {
       final token = prefs.getString(sessionStorageTokenKey);
-      return Token.fromJson(JsonDecoder().convert(token));
+      return token != null
+          ? Token.fromJson(JsonDecoder().convert(token))
+          : null;
     } catch (e) {
       return null;
     }

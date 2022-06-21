@@ -42,8 +42,9 @@ class DialectSdkFactory {
           return SolanaMessaging(
               walletAdapter: config.wallet,
               client: RpcClient(config.solana.rpcUrl),
-              program: (await createDialectProgram(config.wallet,
-                  config.solana.dialectProgramAddress, config.solana.rpcUrl)),
+              program: (await createDialectProgram(
+                  RpcClient(config.solana.rpcUrl),
+                  config.solana.dialectProgramAddress)),
               encryptionKeysProvider: encryptionKeysProvider);
         case Backend.dialectCloud:
           return DataServiceMessaging(
@@ -121,25 +122,23 @@ class DialectSdkFactory {
   InternalSolanaConfig _initializeSolanaConfig() {
     var internalConfig = InternalSolanaConfig(
       SolanaNetwork.mainnet,
-      Ed25519HDPublicKey.fromBase58(programs.mainnet.programAddress as String),
-      programs.mainnet.clusterAddress as String,
+      Ed25519HDPublicKey.fromBase58(programs.mainnet.programAddress),
+      programs.mainnet.clusterAddress,
     );
     final environment = config.environment;
     if (environment == Environment.prod) {
       final network = SolanaNetwork.mainnet;
       internalConfig = InternalSolanaConfig(
           network,
-          Ed25519HDPublicKey.fromBase58(
-              programs.mainnet.programAddress as String),
-          programs.mainnet.clusterAddress as String);
+          Ed25519HDPublicKey.fromBase58(programs.mainnet.programAddress),
+          programs.mainnet.clusterAddress);
     }
     if (environment == Environment.dev) {
       final network = SolanaNetwork.devnet;
       internalConfig = InternalSolanaConfig(
           network,
-          Ed25519HDPublicKey.fromBase58(
-              programs.devnet.programAddress as String),
-          programs.devnet.clusterAddress as String);
+          Ed25519HDPublicKey.fromBase58(programs.devnet.programAddress),
+          programs.devnet.clusterAddress);
     }
     if (environment == Environment.localDev) {
       final network = SolanaNetwork.localnet;

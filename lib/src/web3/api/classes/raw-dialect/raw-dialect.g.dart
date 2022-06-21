@@ -7,18 +7,18 @@ part of 'raw-dialect.dart';
 // **************************************************************************
 
 mixin _$RawDialect {
-  bool get encrypted => throw UnimplementedError();
-  int get lastMessageTimestamp => throw UnimplementedError();
-  RawCyclicByteBuffer get messages => throw UnimplementedError();
   List<Member> get members => throw UnimplementedError();
+  RawCyclicByteBuffer get messages => throw UnimplementedError();
+  int get lastMessageTimestamp => throw UnimplementedError();
+  bool get encrypted => throw UnimplementedError();
 
   Uint8List toBorsh() {
     final writer = BinaryWriter();
 
-    const BBool().write(writer, encrypted);
-    const BU32().write(writer, lastMessageTimestamp);
-    const BRawCyclicByteBuffer().write(writer, messages);
     const BFixedArray(2, BMember()).write(writer, members);
+    const BRawCyclicByteBuffer().write(writer, messages);
+    const BU32().write(writer, lastMessageTimestamp);
+    const BBool().write(writer, encrypted);
 
     return writer.toArray();
   }
@@ -26,16 +26,16 @@ mixin _$RawDialect {
 
 class _RawDialect extends RawDialect {
   _RawDialect({
-    required this.encrypted,
-    required this.lastMessageTimestamp,
-    required this.messages,
     required this.members,
+    required this.messages,
+    required this.lastMessageTimestamp,
+    required this.encrypted,
   }) : super._();
 
-  final bool encrypted;
-  final int lastMessageTimestamp;
-  final RawCyclicByteBuffer messages;
   final List<Member> members;
+  final RawCyclicByteBuffer messages;
+  final int lastMessageTimestamp;
+  final bool encrypted;
 }
 
 class BRawDialect implements BType<RawDialect> {
@@ -49,10 +49,10 @@ class BRawDialect implements BType<RawDialect> {
   @override
   RawDialect read(BinaryReader reader) {
     return RawDialect(
-      encrypted: const BBool().read(reader),
-      lastMessageTimestamp: const BU32().read(reader),
-      messages: const BRawCyclicByteBuffer().read(reader),
       members: const BFixedArray(2, BMember()).read(reader),
+      messages: const BRawCyclicByteBuffer().read(reader),
+      lastMessageTimestamp: const BU32().read(reader),
+      encrypted: const BBool().read(reader),
     );
   }
 }

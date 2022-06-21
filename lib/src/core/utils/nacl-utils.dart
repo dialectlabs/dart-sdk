@@ -83,8 +83,6 @@ class NaClUtils {
   static bool signDetachedVerify(
       Uint8List message, Uint8List signature, Uint8List publicKey) {
     if (signature.length != TweetNaCl.signatureLength) {
-      print(signature.length);
-      print(TweetNaCl.signatureLength);
       throw Exception('bad signature size');
     }
     if (publicKey.length != TweetNaCl.publicKeyLength) {

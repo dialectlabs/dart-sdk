@@ -16,7 +16,7 @@ class Ed2CurveUtils {
       Uint8List publicKey, Uint8List secretKey) {
     try {
       return convertKeyPair(publicKey, secretKey);
-    } catch (E) {
+    } catch (e) {
       return null;
     }
   }
