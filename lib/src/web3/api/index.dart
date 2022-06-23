@@ -263,7 +263,7 @@ List<msg.Message> parseMessages(
     final byteBuffer = ByteData.view(item.buffer.buffer);
     final ownerMemberIndex = byteBuffer.getUint8(0);
     final messageOwner = members[ownerMemberIndex];
-    final timestamp = byteBuffer.getUint32(0) * 1000;
+    final timestamp = byteBuffer.getUint32(1) * 1000;
     final serializedText =
         Uint8List.fromList(byteBuffer.buffer.asUint8List().sublist(5));
     final text = textSerde.deserialize(serializedText);

@@ -8,7 +8,6 @@ import 'package:dialect_sdk/src/internal/messaging/commons.dart';
 import 'package:dialect_sdk/src/internal/messaging/messaging-errors.dart';
 import 'package:dialect_sdk/src/messaging/messaging.interface.dart';
 import 'package:dialect_sdk/src/sdk/errors.dart';
-import 'package:dialect_sdk/src/sdk/sdk.interface.dart';
 import 'package:dialect_sdk/src/web3/api/text-serde/text-serde.dart';
 import 'package:dialect_sdk/src/web3/utils/encryption/ecdh-encryption.dart';
 import 'package:solana/solana.dart' as sol;
@@ -118,11 +117,10 @@ class DataServiceMessaging implements Messaging {
     return Future.wait(dialectAccountDtos.map((e) => _toDataServiceThread(e)));
   }
 
-  Future<DialectAccountDto?> _findByAddress(
-      FindThreadByAddressQuery query) async {
+  Future<DialectAccountDto?> _findById(FindThreadByIdQuery query) async {
     try {
       return await withErrorParsing(
-          dataServiceDialectsApi.find(query.address.toBase58()));
+          dataServiceDialectsApi.find(query.id.address.toBase58()));
     } catch (e) {
       if (e is ResourceNotFoundError) {
         return null;
@@ -142,12 +140,12 @@ class DataServiceMessaging implements Messaging {
       throw IllegalStateError(
           title: "Found multiple dialects with same members");
     }
-    return dialectAccountDtos[0];
+    return dialectAccountDtos.isEmpty ? null : dialectAccountDtos.first;
   }
 
   Future<DialectAccountDto?> _findInternal(FindThreadQuery query) {
-    if (query.isAddress()) {
-      return _findByAddress(query as FindThreadByAddressQuery);
+    if (query.isId()) {
+      return _findById(query as FindThreadByIdQuery);
     }
     return _findByOtherMember(query as FindThreadByOtherMemberQuery);
   }
@@ -219,12 +217,16 @@ class DataServiceThread extends Thread {
     if (encryptionEnabled && !canBeDecrypted) {
       return [];
     }
-    return dialect.dialect.messages
+    var messages = dialect.dialect.messages
         .map((e) => Message(
             text: serde.deserialize(Uint8List.fromList(e.text)),
             timestamp: DateTime.fromMillisecondsSinceEpoch(e.timestamp),
             author: e.owner == me.publicKey.toBase58() ? me : otherMember))
         .toList();
+    messages.sort(((a, b) =>
+        a.timestamp.millisecondsSinceEpoch -
+        b.timestamp.millisecondsSinceEpoch));
+    return messages;
   }
 
   @override

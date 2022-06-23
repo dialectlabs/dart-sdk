@@ -98,12 +98,13 @@ void main() async {
             ],
             encrypted: false);
         final thread = await factory.wallet1.messaging.create(command);
-        final actual = await factory.wallet2.messaging
-            .find(FindThreadByAddressQuery(address: thread.publicKey));
+        final actual = await factory.wallet2.messaging.find(FindThreadByIdQuery(
+            id: ThreadId(thread.publicKey, thread.backend)));
         expect(actual, isNot(equals(null)));
         await thread.delete();
-        final afterDeletion = await factory.wallet2.messaging
-            .find(FindThreadByAddressQuery(address: thread.publicKey));
+        final afterDeletion = await factory.wallet2.messaging.find(
+            FindThreadByIdQuery(
+                id: ThreadId(thread.publicKey, thread.backend)));
         expect(afterDeletion, equals(null));
       }
     }, timeout: timeout);
@@ -146,7 +147,9 @@ void main() async {
             encrypted: false);
         final wallet1Dialect = await factory.wallet1.messaging.create(command);
         final wallet2Dialect = (await factory.wallet2.messaging.find(
-            FindThreadByAddressQuery(address: wallet1Dialect.publicKey)))!;
+            FindThreadByIdQuery(
+                id: ThreadId(
+                    wallet1Dialect.publicKey, wallet1Dialect.backend))))!;
         await wallet1Dialect.send(SendMessageCommand(text: "Hello world 💬"));
         await wallet2Dialect.send(SendMessageCommand(text: "Hello world"));
         // then
@@ -179,7 +182,9 @@ void main() async {
             encrypted: true);
         final wallet1Dialect = await factory.wallet1.messaging.create(command);
         final wallet2Dialect = (await factory.wallet2.messaging.find(
-            FindThreadByAddressQuery(address: wallet1Dialect.publicKey)))!;
+            FindThreadByIdQuery(
+                id: ThreadId(
+                    wallet1Dialect.publicKey, wallet1Dialect.backend))))!;
         final sendMessageCommand = SendMessageCommand(text: "Hello world 💬");
         await wallet1Dialect.send(sendMessageCommand);
         // then
@@ -213,7 +218,9 @@ void main() async {
         // when
         final wallet1Dialect = await factory.wallet1.messaging.create(command);
         final wallet2Dialect = (await factory.wallet2.messaging.find(
-            FindThreadByAddressQuery(address: wallet1Dialect.publicKey)))!;
+            FindThreadByIdQuery(
+                id: ThreadId(
+                    wallet1Dialect.publicKey, wallet1Dialect.backend))))!;
         final sendMessageCommand = SendMessageCommand(text: "Hello world 💬");
         await wallet1Dialect.send(sendMessageCommand);
         // then

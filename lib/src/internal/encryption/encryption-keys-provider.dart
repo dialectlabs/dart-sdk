@@ -10,6 +10,8 @@ class CachedEncryptionKeysProvider extends EncryptionKeysProvider {
   final EncryptionKeysProvider _delegate;
   final EncryptionKeysStore _encryptionKeysStore;
 
+  Future<DiffieHellmanKeys?>? _delegateGetPromise;
+
   CachedEncryptionKeysProvider._(this._delegate, this._encryptionKeysStore);
 
   @override
@@ -25,13 +27,17 @@ class CachedEncryptionKeysProvider extends EncryptionKeysProvider {
   @override
   Future<DiffieHellmanKeys?> getFailSafe() async {
     final existingKeys = await _encryptionKeysStore.get();
-    if (existingKeys == null) {
-      final newKeys = await _delegate.getFailSafe();
-      if (newKeys != null) {
-        return _encryptionKeysStore.save(newKeys);
-      }
+    if (existingKeys != null) {
+      _delegateGetPromise = null;
+      return existingKeys;
     }
-    return existingKeys;
+    _delegateGetPromise ??= _delegate.getFailSafe().then((value) {
+      if (value != null) {
+        _encryptionKeysStore.save(value);
+      }
+      return null;
+    });
+    return _delegateGetPromise;
   }
 
   static CachedEncryptionKeysProvider create(

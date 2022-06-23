@@ -117,7 +117,7 @@ class DataServiceDialectsApiClient implements DataServiceDialectsApi {
   final String baseUrl;
   final TokenProvider tokenProvider;
 
-  final String v0 = "v0";
+  final String v = "v0";
   final String dialects = "dialects";
   final String messages = "messages";
 
@@ -128,7 +128,7 @@ class DataServiceDialectsApiClient implements DataServiceDialectsApi {
   Future<DialectAccountDto> create(CreateDialectCommand command) async {
     final token = await tokenProvider.get();
     return withReThrowingDataServiceError(Dio()
-        .post("$baseUrl/$v0/$dialects",
+        .post("$baseUrl/$v/$dialects",
             options: Options(headers: createHeaders(token)),
             data: command.toJson())
         .then((value) {
@@ -141,7 +141,7 @@ class DataServiceDialectsApiClient implements DataServiceDialectsApi {
   Future delete(String publicKey) async {
     final token = await tokenProvider.get();
     return withReThrowingDataServiceError(Dio()
-        .delete("$baseUrl/$v0/$dialects/$publicKey",
+        .delete("$baseUrl/$v/$dialects/$publicKey",
             options: Options(headers: createHeaders(token)))
         .then((value) {
       return value.data;
@@ -152,7 +152,7 @@ class DataServiceDialectsApiClient implements DataServiceDialectsApi {
   Future<DialectAccountDto> find(String publicKey) async {
     final token = await tokenProvider.get();
     return withReThrowingDataServiceError(Dio()
-        .get("$baseUrl/$v0/$dialects/$publicKey",
+        .get("$baseUrl/$v/$dialects/$publicKey",
             options: Options(headers: createHeaders(token)))
         .then((value) {
       final Map<String, dynamic> json = value.data;
@@ -164,7 +164,7 @@ class DataServiceDialectsApiClient implements DataServiceDialectsApi {
   Future<List<DialectAccountDto>> findAll({FindDialectQuery? query}) async {
     final token = await tokenProvider.get();
     return withReThrowingDataServiceError(Dio()
-        .get("$baseUrl/$v0/$dialects",
+        .get("$baseUrl/$v/$dialects",
             options: Options(headers: createHeaders(token)))
         .then((value) {
       final list = value.data as List<dynamic>;
@@ -177,7 +177,7 @@ class DataServiceDialectsApiClient implements DataServiceDialectsApi {
       String publicKey, SendMessageCommand command) async {
     final token = await tokenProvider.get();
     return withReThrowingDataServiceError(Dio()
-        .post("$baseUrl/$v0/$dialects/$publicKey/$messages",
+        .post("$baseUrl/$v/$dialects/$publicKey/$messages",
             data: command.toJson(),
             options: Options(headers: createHeaders(token)))
         .then((value) {

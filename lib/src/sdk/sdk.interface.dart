@@ -4,8 +4,6 @@ import 'package:dialect_sdk/src/messaging/messaging.interface.dart';
 import 'package:dialect_sdk/src/wallet-adapter/dialect-wallet-adapter.interface.dart';
 import 'package:solana/solana.dart';
 
-enum Backend { solana, dialectCloud }
-
 class Config {
   Environment? environment;
   DialectWalletAdapter wallet;

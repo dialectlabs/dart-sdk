@@ -3,8 +3,8 @@ import 'package:dialect_sdk/src/internal/messaging/commons.dart';
 import 'package:dialect_sdk/src/internal/messaging/messaging-errors.dart';
 import 'package:dialect_sdk/src/internal/messaging/solana-messaging-errors.dart';
 import 'package:dialect_sdk/src/messaging/messaging.interface.dart' as msg;
+import 'package:dialect_sdk/src/messaging/messaging.interface.dart';
 import 'package:dialect_sdk/src/sdk/errors.dart';
-import 'package:dialect_sdk/src/sdk/sdk.interface.dart';
 import 'package:dialect_sdk/src/wallet-adapter/dialect-wallet-adapter-wrapper.dart';
 import 'package:dialect_sdk/src/web3/api/classes/dialect-account/dialect-account.dart';
 import 'package:dialect_sdk/src/web3/api/classes/member/member.dart';
@@ -158,7 +158,7 @@ class SolanaMessaging implements msg.Messaging {
     final encryptionProps =
         await getEncryptionProps(walletAdapter.publicKey, encryptionKeys);
     try {
-      if (query is msg.FindThreadByAddressQuery) {
+      if (query is msg.FindThreadByIdQuery) {
         return await _findByAddress(query, encryptionProps);
       }
       return await _findByOtherMember(
@@ -168,10 +168,10 @@ class SolanaMessaging implements msg.Messaging {
     }
   }
 
-  Future<DialectAccount> _findByAddress(msg.FindThreadByAddressQuery query,
-      EncryptionProps? encryptionProps) async {
+  Future<DialectAccount> _findByAddress(
+      msg.FindThreadByIdQuery query, EncryptionProps? encryptionProps) async {
     return withErrorParsing(
-        getDialect(client, program, query.address, encryptionProps));
+        getDialect(client, program, query.id.address, encryptionProps));
   }
 
   Future<DialectAccount> _findByOtherMember(
@@ -249,12 +249,16 @@ class SolanaThread extends msg.Thread {
         await getEncryptionProps(me.publicKey, encryptionKeys);
     dialectAccount = await getDialect(
         client, program, dialectAccount.publicKey, encryptionProps);
-    return dialectAccount.dialect.messages
+    final messages = dialectAccount.dialect.messages
         .map((e) => msg.Message(
             author: e.owner == me.publicKey ? me : otherMember,
             text: e.text,
             timestamp: DateTime.fromMillisecondsSinceEpoch(e.timestamp)))
         .toList();
+    messages.sort(((a, b) =>
+        a.timestamp.millisecondsSinceEpoch -
+        b.timestamp.millisecondsSinceEpoch));
+    return messages;
   }
 
   @override
