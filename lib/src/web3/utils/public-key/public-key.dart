@@ -9,24 +9,6 @@ const _maxSeeds = 16;
 final _magicWord = 'ProgramDerivedAddress'.codeUnits;
 final _sha256 = Sha256();
 
-Future<Ed25519HDPublicKey> createProgramAddress({
-  required Iterable<int> seeds,
-  required Ed25519HDPublicKey programId,
-}) async {
-  final seedBytes = seeds
-      .followedBy(programId.bytes)
-      .followedBy(_magicWord)
-      .toList(growable: false);
-  final data = await _computeHash(seedBytes);
-  if (isPointOnEd25519Curve(data)) {
-    throw const FormatException(
-      'failed to create address with provided seeds',
-    );
-  } else {
-    return Ed25519HDPublicKey(data);
-  }
-}
-
 Future<ProgramAddressResult> findProgramAddressWithNonce({
   required Iterable<Iterable<int>> seeds,
   required Ed25519HDPublicKey programId,
@@ -44,7 +26,7 @@ Future<ProgramAddressResult> findProgramAddressWithNonce({
   int bumpSeed = _maxBumpSeed;
   while (bumpSeed >= 0) {
     try {
-      final pubKey = await createProgramAddress(
+      final pubKey = await Ed25519HDPublicKey.createProgramAddress(
         seeds: [...flatSeeds, bumpSeed],
         programId: programId,
       );

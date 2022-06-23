@@ -2,10 +2,6 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:dialect_sdk/src/core/constants/constants.dart';
-import 'package:dialect_sdk/src/internal/messaging/solana-messaging-errors.dart';
-import 'package:dialect_sdk/src/wallet-adapter/dialect-wallet-adapter-wrapper.dart';
-import 'package:dialect_sdk/src/wallet-adapter/dialect-wallet-adapter.interface.dart';
-import 'package:dialect_sdk/src/wallet-adapter/node-dialect-wallet-adapter.dart';
 import 'package:dialect_sdk/src/web3/api/borsh/borsh-ext.dart';
 import 'package:dialect_sdk/src/web3/api/classes/dialect-account/dialect-account.dart';
 import 'package:dialect_sdk/src/web3/api/classes/member/member.dart';
@@ -34,17 +30,6 @@ const DIALECT_ACCOUNT_MEMBER0_OFFSET = ACCOUNT_DESCRIPTOR_SIZE;
 const DIALECT_ACCOUNT_MEMBER1_OFFSET =
     DIALECT_ACCOUNT_MEMBER0_OFFSET + DIALECT_ACCOUNT_MEMBER_SIZE;
 const DIALECT_ACCOUNT_MEMBER_SIZE = 34;
-
-Future<Account?> accountInfoFetch(
-    String url, RpcClient connection, String publicKeyStr) {
-  final publicKey = Ed25519HDPublicKey.fromBase58(publicKeyStr);
-  return accountInfoGet(connection, publicKey);
-}
-
-Future<Account?> accountInfoGet(
-    RpcClient connection, Ed25519HDPublicKey publicKey) async {
-  return await connection.getAccountInfo(publicKey.toBase58());
-}
 
 Future<DialectAccount> createDialect(
     {required RpcClient client,
@@ -143,12 +128,20 @@ Future<List<DialectAccount>> findDialects(
   final results = await Future.wait(memberFilters.map((e) => client
       .getProgramAccounts(program.pubkey,
           encoding: Encoding.base64, filters: [e])));
-  final dialects = results.expand((element) => element).map((e) {
-    final rawDialect = parseBytesFromAccount(e.account, RawDialect.fromBorsh);
-    return DialectAccount(
-        dialect: parseRawDialect(rawDialect, null),
-        publicKey: Ed25519HDPublicKey.fromBase58(e.pubkey));
-  }).toList();
+  final dialects = results
+      .expand((element) => element)
+      .map((e) {
+        final rawDialect =
+            parseBytesFromAccount(e.account, RawDialect.fromBorsh);
+        return rawDialect != null
+            ? DialectAccount(
+                dialect: parseRawDialect(rawDialect, null),
+                publicKey: Ed25519HDPublicKey.fromBase58(e.pubkey))
+            : null;
+      })
+      .where((element) => element != null)
+      .map((e) => e!)
+      .toList();
   dialects.sort((d1, d2) =>
       d2.dialect.lastMessageTimestamp -
       d1.dialect.lastMessageTimestamp); // descending
@@ -157,12 +150,8 @@ Future<List<DialectAccount>> findDialects(
 
 Future<DialectAccount> getDialect(RpcClient client, ProgramAccount program,
     Ed25519HDPublicKey publicKey, EncryptionProps? encryptionProps) async {
-  final account = await client.getAccountInfo(publicKey.toBase58(),
-      encoding: Encoding.base64);
-  if (account == null) {
-    throw AccountNotFoundError();
-  }
-  final rawDialect = parseBytesFromAccount(account, RawDialect.fromBorsh);
+  final rawDialect =
+      await fetchAccount(client, publicKey, RawDialect.fromBorsh);
   final dialect = parseRawDialect(rawDialect, encryptionProps);
   return DialectAccount(dialect: dialect, publicKey: publicKey);
 }
@@ -215,10 +204,8 @@ Future<Metadata> getMetadata(RpcClient client, ProgramAccount program,
       userIsKeypair
           ? (await user.keyPair!.extractPublicKey())
           : user.publicKey);
-  final account = await client.getAccountInfo(
-      addressResult.publicKey.toBase58(),
-      encoding: Encoding.base64);
-  final metadata = parseBytesFromAccount(account, Metadata.fromBorsh);
+  final metadata =
+      await fetchAccount(client, addressResult.publicKey, Metadata.fromBorsh);
   return Metadata(
       subscriptions: metadata.subscriptions
           .where((element) => element.pubKey != DEFAULT_PUBKEY)
@@ -235,11 +222,6 @@ Future<ProgramAddressResult> getMetadataProgramAddress(
 bool isDialectAdmin(DialectAccount dialect, Ed25519HDPublicKey user) {
   return dialect.dialect.members.any((element) =>
       element.publicKey.toBase58() == user.toBase58() && element.scopes[0]);
-}
-
-Future<Account?> ownerFetcher(
-    String url, Wallet wallet, RpcClient connection) async {
-  return accountInfoGet(connection, wallet.publicKey);
 }
 
 List<msg.Message> parseMessages(
@@ -282,7 +264,7 @@ Dialect parseRawDialect(
       encrypted: rawDialect.encrypted);
 }
 
-Future<msg.Message> sendMessage(
+Future<msg.Message?> sendMessage(
     RpcClient client,
     ProgramAccount program,
     DialectAccount dialectAccount,
@@ -311,7 +293,7 @@ Future<msg.Message> sendMessage(
 
   final d = await getDialect(
       client, program, addressResult.publicKey, encryptionProps);
-  return d.dialect.messages[0];
+  return d != null ? d.dialect.messages[0] : null;
 }
 
 class FindDialectQuery {
@@ -334,18 +316,4 @@ class KeypairWallet {
       keyPair != null ? keyPair!.publicKey : wallet!;
 
   List<Ed25519HDKeyPair> get signers => keyPair != null ? [keyPair!] : [];
-  static KeypairWallet fromWalletAdapter(DialectWalletAdapter adapter) {
-    if (adapter is DialectWalletAdapterWrapper) {
-      return fromWalletAdapterWrapper(adapter);
-    } else if (adapter is NodeDialectWalletAdapter) {
-      return KeypairWallet.fromKeypair(adapter.keypair);
-    } else {
-      return KeypairWallet.fromWallet(adapter.publicKey);
-    }
-  }
-
-  static KeypairWallet fromWalletAdapterWrapper(
-      DialectWalletAdapterWrapper wrapper) {
-    return fromWalletAdapter(wrapper.delegate);
-  }
 }

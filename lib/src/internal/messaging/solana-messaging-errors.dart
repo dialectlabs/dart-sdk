@@ -1,8 +1,9 @@
 import 'package:dialect_sdk/src/sdk/errors.dart';
+import 'package:dialect_sdk/src/web3/api/borsh/borsh-ext.dart';
 
 SolanaError parseError(DialectSdkError error) {
   final message = error.message;
-
+  print("PARSING $message");
   if (message == null) {
     throw UnknownError(details: [error]);
   }
@@ -47,7 +48,7 @@ class AccountAlreadyExistsError extends SolanaError {
 
 class AccountNotFoundError extends SolanaError {
   static List<RegExp> matchers = [
-    RegExp(r'Account does not exist'),
+    RegExp("${AccountNotFoundException().message}"),
   ];
 
   AccountNotFoundError({List<dynamic>? details})

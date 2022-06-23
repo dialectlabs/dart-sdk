@@ -33,8 +33,10 @@ Future<T> withErrorParsing<T>(Future<T> future,
       if (e.statusCode == 412) {
         throw BusinessContstraintViolationError(msg: createMessage(e));
       }
+      print("THROWING $e with message ${createMessage(e)}");
       throw UnknownError(details: [e], msg: createMessage(e));
     }
+    print("THROWING $e");
     throw UnknownError(details: [e]);
   }
 }

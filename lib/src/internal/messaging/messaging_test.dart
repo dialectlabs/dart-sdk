@@ -25,8 +25,8 @@ void main() async {
     setUp(() async {
       messagingMap.add(
           MessagingMap("DataServiceMessaging", createDataServiceMessaging));
-      messagingMap
-          .add(MessagingMap("SolanaMessaging", createSolanaServiceMessaging));
+      // messagingMap
+      //     .add(MessagingMap("SolanaMessaging", createSolanaServiceMessaging));
     });
     test('can list all threads', () async {
       for (var item in messagingMap) {

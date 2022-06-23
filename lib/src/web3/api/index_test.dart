@@ -14,8 +14,6 @@ void main() {
     late List<Ed25519HDKeyPair> users;
     late Wallet wallet;
     setUp(() async {
-      // const networkUrl = "https://api.mainnet-beta.solana.com";
-      // const networkUrl = "https://api.devnet.solana.com";
       final networkUrl = programs.localnet.clusterAddress;
       final dialectProgramId = programs.localnet.programAddress;
       client = RpcClient(networkUrl);

@@ -13,11 +13,33 @@ Uint8List accountDiscriminator(String name) {
   return Uint8List.fromList(str.bytes.sublist(0, ACCOUNT_DISCRIMINATOR_SIZE));
 }
 
-T parseBytesFromAccount<T>(Account? account, T Function(Uint8List) convert,
+Future<T> fetchAccount<T>(RpcClient client, Ed25519HDPublicKey publicKey,
+    T Function(Uint8List) convert,
+    {int skip = 8, Encoding encoding = Encoding.base64}) async {
+  final account =
+      await client.getAccountInfo(publicKey.toBase58(), encoding: encoding);
+  if (account == null) {
+    throw AccountNotFoundException();
+  }
+  return parseBytesFromAccount(account, convert);
+}
+
+T parseBytesFromAccount<T>(Account account, T Function(Uint8List) convert,
     {int skip = 8}) {
-  final accountData = (account?.data as BinaryAccountData).data;
+  final accountData = (account.data as BinaryAccountData).data;
   final data = Uint8List.fromList(accountData);
   return convert(data.sublist(skip));
+}
+
+class AccountNotFoundException implements Exception {
+  final String type;
+  final String title;
+  final String? message;
+
+  AccountNotFoundException()
+      : type = "AccountNotFoundException",
+        title = "Error",
+        message = "Account does not exist.";
 }
 
 class BBool extends BType<bool> {
