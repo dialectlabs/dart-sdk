@@ -1,3 +1,4 @@
+import 'package:dialect_protocol/dialect_protocol.dart';
 import 'package:dialect_sdk/src/internal/encryption/encryption-keys-provider.dart';
 import 'package:dialect_sdk/src/internal/messaging/commons.dart';
 import 'package:dialect_sdk/src/internal/messaging/messaging-errors.dart';
@@ -8,11 +9,6 @@ import 'package:dialect_sdk/src/sdk/errors.dart';
 import 'package:dialect_sdk/src/wallet-adapter/dialect-wallet-adapter-wrapper.dart';
 import 'package:dialect_sdk/src/wallet-adapter/dialect-wallet-adapter.interface.dart';
 import 'package:dialect_sdk/src/wallet-adapter/node-dialect-wallet-adapter.dart';
-import 'package:dialect_sdk/src/web3/api/classes/dialect-account/dialect-account.dart';
-import 'package:dialect_sdk/src/web3/api/classes/member/member.dart';
-import 'package:dialect_sdk/src/web3/api/index.dart';
-import 'package:dialect_sdk/src/web3/api/text-serde/text-serde.dart';
-import 'package:dialect_sdk/src/web3/utils/encryption/ecdh-encryption.dart';
 import 'package:solana/dto.dart';
 import 'package:solana/solana.dart';
 
@@ -200,8 +196,9 @@ class SolanaMessaging implements msg.Messaging {
       msg.FindThreadByOtherMemberQuery query,
       EncryptionProps? encryptionProps) async {
     final otherMember = requireSingleMember(query.otherMembers);
-    return withErrorParsing(getDialectForMembers(client, program,
-        [walletAdapter.publicKey, otherMember], encryptionProps));
+    return withErrorParsing(getDialectForMembers(
+        client, program, [walletAdapter.publicKey, otherMember],
+        encryptionProps: encryptionProps));
   }
 
   Future<EncryptionProps?> _getEncryptionProps(
@@ -294,6 +291,6 @@ class SolanaThread extends msg.Thread {
         dialectAccount,
         KeypairWalletWrapper.fromWalletAdapterWrapper(walletAdapter),
         command.text,
-        encryptionProps);
+        encryptionProps: encryptionProps);
   }
 }

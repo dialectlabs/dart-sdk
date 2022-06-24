@@ -1,9 +1,22 @@
+import 'package:dialect_protocol/dialect_protocol.dart';
 import 'package:dialect_sdk/src/sdk/errors.dart';
-import 'package:dialect_sdk/src/web3/api/borsh/borsh-ext.dart';
 
 SolanaError parseError(DialectSdkError error) {
   final message = error.message;
-  print("PARSING $message");
+  return _parseErrorMessage(message, error);
+}
+
+Future<T> withErrorParsing<T>(Future<T> future) async {
+  try {
+    return await future;
+  } on DialectSdkError catch (e) {
+    throw parseError(e);
+  } on AccountNotFoundException catch (e) {
+    throw _parseErrorMessage(e.message, e);
+  }
+}
+
+SolanaError _parseErrorMessage(String? message, Exception error) {
   if (message == null) {
     throw UnknownError(details: [error]);
   }
@@ -23,14 +36,6 @@ SolanaError parseError(DialectSdkError error) {
     throw NotSignedError(details: [error]);
   }
   throw UnknownError(details: [error]);
-}
-
-Future<T> withErrorParsing<T>(Future<T> future) async {
-  try {
-    return await future;
-  } on DialectSdkError catch (e) {
-    throw parseError(e);
-  }
 }
 
 class AccountAlreadyExistsError extends SolanaError {

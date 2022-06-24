@@ -1,4 +1,4 @@
-import 'package:dialect_sdk/src/web3/utils/encryption/ecdh-encryption.dart';
+import 'package:dialect_protocol/dialect_protocol.dart';
 import 'package:pinenacl/ed25519.dart';
 import 'package:pinenacl/tweetnacl.dart';
 
