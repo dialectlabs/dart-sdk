@@ -1,5 +1,4 @@
 import 'package:borsh_annotation/borsh_annotation.dart';
-import 'package:dialect_protocol/dialect_protocol.dart' as proto;
 import 'package:dialect_sdk/src/internal/data-service-api/data-service-api.dart'
     as api;
 import 'package:dialect_sdk/src/internal/data-service-api/data-service-errors.dart';
@@ -9,6 +8,7 @@ import 'package:dialect_sdk/src/internal/messaging/commons.dart';
 import 'package:dialect_sdk/src/internal/messaging/messaging-errors.dart';
 import 'package:dialect_sdk/src/messaging/messaging.interface.dart';
 import 'package:dialect_sdk/src/sdk/errors.dart';
+import 'package:dialect_web3/dialect_web3.dart' as web3;
 import 'package:solana/solana.dart' as sol;
 
 MemberDto? findMember(sol.Ed25519HDPublicKey memberPk, DialectDto dialect) {
@@ -80,20 +80,20 @@ class DataServiceMessaging implements Messaging {
 
   Future<TextSerdeResult> createTextSerde(DialectDto dialect) async {
     if (!dialect.encrypted) {
-      return TextSerdeResult(proto.UnencryptedTextSerde(), true);
+      return TextSerdeResult(web3.UnencryptedTextSerde(), true);
     }
     final diffieHellmanKeyPair = await encryptionKeysProvider.getFailSafe();
     final encryptionProps = (diffieHellmanKeyPair != null)
-        ? proto.EncryptionProps(
+        ? web3.EncryptionProps(
             me,
-            proto.Curve25519KeyPair(
+            web3.Curve25519KeyPair(
                 diffieHellmanKeyPair.publicKey, diffieHellmanKeyPair.secretKey))
         : null;
     if (encryptionProps == null) {
-      return TextSerdeResult(proto.UnencryptedTextSerde(), false);
+      return TextSerdeResult(web3.UnencryptedTextSerde(), false);
     }
     return TextSerdeResult(
-        proto.EncryptedTextSerde(
+        web3.EncryptedTextSerde(
             encryptionProps: encryptionProps,
             members: dialect.members
                 .map((e) => sol.Ed25519HDPublicKey.fromBase58(e.publicKey))
@@ -180,7 +180,7 @@ class DataServiceMessaging implements Messaging {
 
 class DataServiceThread extends Thread {
   final api.DataServiceDialectsApi dataServiceDialectsApi;
-  final proto.TextSerde serde;
+  final web3.TextSerde serde;
   final ThreadMember otherMember;
 
   DataServiceThread(
@@ -237,7 +237,7 @@ class DataServiceThread extends Thread {
 }
 
 class TextSerdeResult {
-  proto.TextSerde textSerde;
+  web3.TextSerde textSerde;
   bool decrypted;
 
   TextSerdeResult(this.textSerde, this.decrypted);

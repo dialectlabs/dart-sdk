@@ -1,4 +1,3 @@
-import 'package:dialect_protocol/dialect_protocol.dart';
 import 'package:dialect_sdk/src/internal/encryption/encryption-keys-provider.dart';
 import 'package:dialect_sdk/src/internal/messaging/commons.dart';
 import 'package:dialect_sdk/src/internal/messaging/messaging-errors.dart';
@@ -9,6 +8,7 @@ import 'package:dialect_sdk/src/sdk/errors.dart';
 import 'package:dialect_sdk/src/wallet-adapter/dialect-wallet-adapter-wrapper.dart';
 import 'package:dialect_sdk/src/wallet-adapter/dialect-wallet-adapter.interface.dart';
 import 'package:dialect_sdk/src/wallet-adapter/node-dialect-wallet-adapter.dart';
+import 'package:dialect_web3/dialect_web3.dart';
 import 'package:solana/dto.dart';
 import 'package:solana/solana.dart';
 

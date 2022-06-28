@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:dialect_protocol/dialect_protocol.dart';
 import 'package:dialect_sdk/src/internal/auth/token-utils.dart';
 import 'package:dialect_sdk/src/internal/data-service-api/data-service-api.dart';
 import 'package:dialect_sdk/src/internal/data-service-api/token-provider.dart';
@@ -15,6 +14,7 @@ import 'package:dialect_sdk/src/sdk/errors.dart';
 import 'package:dialect_sdk/src/sdk/sdk.interface.dart';
 import 'package:dialect_sdk/src/wallet-adapter/dialect-wallet-adapter-wrapper.dart';
 import 'package:dialect_sdk/src/wallet-adapter/dialect-wallet-adapter.interface.dart';
+import 'package:dialect_web3/dialect_web3.dart';
 import 'package:solana/solana.dart';
 
 class DialectSdkFactory {

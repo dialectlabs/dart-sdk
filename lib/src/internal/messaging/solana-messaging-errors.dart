@@ -1,5 +1,5 @@
-import 'package:dialect_protocol/dialect_protocol.dart';
 import 'package:dialect_sdk/src/sdk/errors.dart';
+import 'package:dialect_web3/dialect_web3.dart';
 
 SolanaError parseError(DialectSdkError error) {
   final message = error.message;

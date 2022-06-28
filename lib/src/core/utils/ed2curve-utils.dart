@@ -1,4 +1,4 @@
-import 'package:dialect_protocol/dialect_protocol.dart';
+import 'package:dialect_web3/dialect_web3.dart';
 import 'package:pinenacl/ed25519.dart';
 import 'package:pinenacl/tweetnacl.dart';
 
