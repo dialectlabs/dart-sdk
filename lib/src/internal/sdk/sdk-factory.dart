@@ -35,31 +35,35 @@ class DialectSdkFactory {
 
   Future<Messaging> _createMessaging(InternalConfig config,
       DialectWalletAdapterEncryptionKeysProvider encryptionKeysProvider) async {
-    List<Messaging> messagingOptions =
+    List<MessagingBackend> messagingBackends =
         await Future.wait(config.backends.map((backend) async {
       switch (backend) {
         case Backend.solana:
-          return SolanaMessaging(
-              walletAdapter: config.wallet,
-              client: RpcClient(config.solana.rpcUrl),
-              program: (await createDialectProgram(
-                  RpcClient(config.solana.rpcUrl),
-                  config.solana.dialectProgramAddress)),
-              encryptionKeysProvider: encryptionKeysProvider);
+          return MessagingBackend(
+              SolanaMessaging(
+                  walletAdapter: config.wallet,
+                  client: RpcClient(config.solana.rpcUrl),
+                  program: (await createDialectProgram(
+                      RpcClient(config.solana.rpcUrl),
+                      config.solana.dialectProgramAddress)),
+                  encryptionKeysProvider: encryptionKeysProvider),
+              Backend.solana);
         case Backend.dialectCloud:
-          return DataServiceMessaging(
-              me: config.wallet.publicKey,
-              dataServiceDialectsApi: DataServiceDialectsApiClient(
-                  baseUrl: config.dialectCloud.url,
-                  tokenProvider: TokenProvider.create(
-                      signer: DialectWalletAdapterEd25519TokenSigner(
-                          dialectWalletAdapter: config.wallet),
-                      ttl: Duration(minutes: 60),
-                      tokenStore: config.dialectCloud.tokenStore)),
-              encryptionKeysProvider: encryptionKeysProvider);
+          return MessagingBackend(
+              DataServiceMessaging(
+                  me: config.wallet.publicKey,
+                  dataServiceDialectsApi: DataServiceDialectsApiClient(
+                      baseUrl: config.dialectCloud.url,
+                      tokenProvider: TokenProvider.create(
+                          signer: DialectWalletAdapterEd25519TokenSigner(
+                              dialectWalletAdapter: config.wallet),
+                          ttl: Duration(minutes: 60),
+                          tokenStore: config.dialectCloud.tokenStore)),
+                  encryptionKeysProvider: encryptionKeysProvider),
+              Backend.dialectCloud);
       }
     }));
-    return MessagingFacade(messagingOptions);
+    return MessagingFacade(messagingBackends);
   }
 
   List<Backend> _initializeBackends() {

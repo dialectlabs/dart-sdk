@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:dialect_sdk/src/auth/auth.interface.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-const String sessionStorageTokenKey = 'dialect-auth-token';
+const String storageTokenKey = 'dialect-auth-token';
 
 class InMemoryTokenStore extends TokenStore {
   Token? _token;
@@ -25,7 +25,7 @@ class SessionStorageTokenStore extends TokenStore {
   Future<Token?> get() async {
     final prefs = await SharedPreferences.getInstance();
     try {
-      final token = prefs.getString(sessionStorageTokenKey);
+      final token = prefs.getString(storageTokenKey);
       return token != null
           ? Token.fromJson(JsonDecoder().convert(token))
           : null;
@@ -37,8 +37,7 @@ class SessionStorageTokenStore extends TokenStore {
   @override
   Future<Token> save(Token token) async {
     final prefs = await SharedPreferences.getInstance();
-    prefs.setString(
-        sessionStorageTokenKey, JsonEncoder().convert(token.toJson()));
+    prefs.setString(storageTokenKey, JsonEncoder().convert(token.toJson()));
     return token;
   }
 }
@@ -50,7 +49,7 @@ abstract class TokenStore {
     return InMemoryTokenStore();
   }
 
-  static TokenStore createSession() {
+  static TokenStore createSessionStorage() {
     return SessionStorageTokenStore();
   }
 }

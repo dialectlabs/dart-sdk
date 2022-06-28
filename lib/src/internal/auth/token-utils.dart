@@ -3,7 +3,6 @@ import 'dart:typed_data';
 
 import 'package:dialect_sdk/src/auth/auth.interface.dart';
 import 'package:dialect_sdk/src/core/constants.dart';
-import 'package:dialect_sdk/src/core/extensions/string-extensions.dart';
 import 'package:dialect_sdk/src/core/utils/nacl-utils.dart';
 import 'package:dialect_sdk/src/sdk/errors.dart';
 import 'package:dialect_sdk/src/wallet-adapter/dialect-wallet-adapter.interface.dart';
@@ -11,7 +10,22 @@ import 'package:solana/solana.dart';
 
 String bytesToBase64(Uint8List signature) {
   final encoded = base64Url.encode(signature);
-  return encoded.replaceAll(RegExp(r'='), '');
+  final replaced = encoded.replaceAll(RegExp(r'='), '');
+  return replaced;
+}
+
+Uint8List decodeUrlSafe(String serialized) {
+  final mod = serialized.length % 4;
+  if (mod > 0) {
+    serialized += '=' * (4 - mod);
+  }
+  return base64Url.decode(serialized);
+}
+
+Map<String, dynamic> fromBase64(String serialized) {
+  final byteArray = decodeUrlSafe(serialized);
+  final json = utf8.decode(byteArray);
+  return JsonDecoder().convert(json);
 }
 
 String toBase64(String jsonString) {
@@ -82,14 +96,15 @@ class AuthTokensImpl implements AuthTokens {
     final base64Header = parts[0];
     final base64Body = parts[1];
     final base64Signature = parts[2];
+
     if (base64Header.isEmpty || base64Body.isEmpty || base64Signature.isEmpty) {
       throw TokenParsingError();
     }
-    final decoder = JsonDecoder();
     try {
-      final body = TokenBody.fromJson(decoder.convert(base64Body.atob()));
-      final header = TokenHeader.fromJson(decoder.convert(base64Header.atob()));
-      final signature = base64Signature.decodeBase64();
+      final body = TokenBody.fromJson(fromBase64(base64Body));
+      final header = TokenHeader.fromJson(fromBase64(base64Header));
+      final signature = decodeUrlSafe(base64Signature);
+
       return Token(
           rawValue: rawToken,
           header: header,
@@ -100,6 +115,7 @@ class AuthTokensImpl implements AuthTokens {
           base64Signature: base64Signature);
     } catch (e) {
       // TODO: log
+      print("ERROR $e");
       throw TokenParsingError();
     }
   }

@@ -7,6 +7,8 @@ class CachedTokenProvider extends TokenProvider {
   TokenStore tokenStore;
   AuthTokens tokenUtils;
 
+  Future<Token>? _delegateGetPromise;
+
   CachedTokenProvider(
       {required this.delegate,
       required this.tokenStore,
@@ -15,11 +17,13 @@ class CachedTokenProvider extends TokenProvider {
   @override
   Future<Token> get() async {
     final existingToken = await tokenStore.get();
-    if (existingToken == null || tokenUtils.isExpired(existingToken)) {
-      final newToken = await delegate.get();
-      return await tokenStore.save(newToken);
+    if (existingToken != null && !tokenUtils.isExpired(existingToken)) {
+      _delegateGetPromise = null;
+      return existingToken;
     }
-    return existingToken;
+    _delegateGetPromise ??=
+        delegate.get().then((value) => tokenStore.save(value));
+    return _delegateGetPromise!;
   }
 }
 

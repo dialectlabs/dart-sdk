@@ -20,6 +20,7 @@ dependencies:
   solana: ^0.25.0
   dio: ^4.0.6
   nanoid: ^1.0.0
+  async: ^2.9.0
 #   path: ^1.8.0
 
 dev_dependencies:

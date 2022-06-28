@@ -5,6 +5,18 @@ import 'package:solana/solana.dart';
 
 part 'messaging.interface.g.dart';
 
+enum Backend {
+  @JsonValue(BackendValueTypes.solana)
+  solana,
+  @JsonValue(BackendValueTypes.dialectCloud)
+  dialectCloud
+}
+
+class BackendValueTypes {
+  static const String solana = "SOLANA";
+  static const String dialectCloud = "DIALECT_CLOUD";
+}
+
 @JsonSerializable(explicitToJson: true)
 class CreateThreadCommand {
   @JsonKey(name: "me")
@@ -13,22 +25,27 @@ class CreateThreadCommand {
   final List<ThreadMember> otherMembers;
   @JsonKey(name: "encrypted")
   final bool encrypted;
+  @JsonKey(name: "backend")
+  final Backend? backend;
 
   CreateThreadCommand(
-      {required this.me, required this.otherMembers, required this.encrypted});
+      {required this.me,
+      required this.otherMembers,
+      required this.encrypted,
+      this.backend});
 
   factory CreateThreadCommand.fromJson(Map<String, dynamic> json) =>
       _$CreateThreadCommandFromJson(json);
   Map<String, dynamic> toJson() => _$CreateThreadCommandToJson(this);
 }
 
-class FindThreadByAddressQuery implements FindThreadQuery {
-  Ed25519HDPublicKey address;
+class FindThreadByIdQuery implements FindThreadQuery {
+  ThreadId id;
 
-  FindThreadByAddressQuery({required this.address});
+  FindThreadByIdQuery({required this.id});
 
   @override
-  bool isAddress() {
+  bool isId() {
     return true;
   }
 
@@ -44,7 +61,7 @@ class FindThreadByOtherMemberQuery implements FindThreadQuery {
   FindThreadByOtherMemberQuery({required this.otherMembers});
 
   @override
-  bool isAddress() {
+  bool isId() {
     return false;
   }
 
@@ -55,7 +72,7 @@ class FindThreadByOtherMemberQuery implements FindThreadQuery {
 }
 
 abstract class FindThreadQuery {
-  bool isAddress();
+  bool isId();
   bool isOtherMember();
 }
 
@@ -121,6 +138,12 @@ class Thread {
   Future send(SendMessageCommand command) {
     throw UnimplementedError();
   }
+}
+
+class ThreadId {
+  Ed25519HDPublicKey address;
+  Backend? backend;
+  ThreadId(this.address, this.backend);
 }
 
 @JsonSerializable(explicitToJson: true)
