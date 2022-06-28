@@ -9,10 +9,7 @@ import 'package:dialect_sdk/src/internal/messaging/solana-messaging.dart';
 import 'package:dialect_sdk/src/messaging/messaging.interface.dart';
 import 'package:dialect_sdk/src/wallet-adapter/dialect-wallet-adapter-wrapper.dart';
 import 'package:dialect_sdk/src/wallet-adapter/node-dialect-wallet-adapter.dart';
-import 'package:dialect_sdk/src/web3/api/index_test.dart';
-import 'package:dialect_sdk/src/web3/api/text-serde/text-serde.dart';
-import 'package:dialect_sdk/src/web3/programs.dart';
-import 'package:dialect_sdk/src/web3/utils/index.dart';
+import 'package:dialect_web3/dialect_web3.dart' as web3;
 import 'package:solana/solana.dart' as sol;
 import 'package:test/test.dart';
 
@@ -25,8 +22,8 @@ void main() async {
     setUp(() async {
       messagingMap.add(
           MessagingMap("DataServiceMessaging", createDataServiceMessaging));
-      messagingMap
-          .add(MessagingMap("SolanaMessaging", createSolanaServiceMessaging));
+      // messagingMap
+      //     .add(MessagingMap("SolanaMessaging", createSolanaServiceMessaging));
     });
     test('can list all threads', () async {
       for (var item in messagingMap) {
@@ -247,10 +244,10 @@ void main() async {
 
         final message = "Hello world";
 
-        final serde1 = EncryptedTextSerde(
+        final serde1 = web3.EncryptedTextSerde(
             encryptionProps: encryptionProps1,
             members: [wallet1.publicKey, wallet2.publicKey]);
-        final serde2 = EncryptedTextSerde(
+        final serde2 = web3.EncryptedTextSerde(
             encryptionProps: encryptionProps2,
             members: [wallet1.publicKey, wallet2.publicKey]);
 
@@ -302,14 +299,14 @@ Future<MessagingState> createSolanaServiceMessaging() async {
 }
 
 Future<WalletMessagingState> createSolanaWalletMessagingState() async {
-  final client = sol.RpcClient(programs.localnet.clusterAddress);
+  final client = sol.RpcClient(web3.programs.localnet.clusterAddress);
   final walletAdapter = DialectWalletAdapterWrapper(
       delegate: await NodeDialectWalletAdapter.create());
   final program = await createDialectProgram(client,
-      sol.Ed25519HDPublicKey.fromBase58(programs.localnet.programAddress));
+      sol.Ed25519HDPublicKey.fromBase58(web3.programs.localnet.programAddress));
   var tx = await client.requestAirdrop(
-      walletAdapter.publicKey.toBase58(), LAMPORTS_PER_SOL * 100);
-  await waitForFinality(client: client, transactionStr: tx);
+      walletAdapter.publicKey.toBase58(), web3.LAMPORTS_PER_SOL * 100);
+  await web3.waitForFinality(client: client, transactionStr: tx);
 
   final userSolanaMessaging =
       SolanaMessaging.createSM(walletAdapter, program, client);

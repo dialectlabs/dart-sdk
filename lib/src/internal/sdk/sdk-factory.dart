@@ -8,14 +8,13 @@ import 'package:dialect_sdk/src/internal/encryption/encryption-keys-provider.dar
 import 'package:dialect_sdk/src/internal/encryption/encryption-keys-store.dart';
 import 'package:dialect_sdk/src/internal/messaging/data-service-messaging.dart';
 import 'package:dialect_sdk/src/internal/messaging/messaging-facade.dart';
-import 'package:dialect_sdk/src/internal/messaging/solana-dialect-program-factory.dart';
 import 'package:dialect_sdk/src/internal/messaging/solana-messaging.dart';
 import 'package:dialect_sdk/src/messaging/messaging.interface.dart';
 import 'package:dialect_sdk/src/sdk/errors.dart';
 import 'package:dialect_sdk/src/sdk/sdk.interface.dart';
 import 'package:dialect_sdk/src/wallet-adapter/dialect-wallet-adapter-wrapper.dart';
 import 'package:dialect_sdk/src/wallet-adapter/dialect-wallet-adapter.interface.dart';
-import 'package:dialect_sdk/src/web3/programs.dart';
+import 'package:dialect_web3/dialect_web3.dart';
 import 'package:solana/solana.dart';
 
 class DialectSdkFactory {

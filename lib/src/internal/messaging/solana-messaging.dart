@@ -6,11 +6,9 @@ import 'package:dialect_sdk/src/messaging/messaging.interface.dart' as msg;
 import 'package:dialect_sdk/src/messaging/messaging.interface.dart';
 import 'package:dialect_sdk/src/sdk/errors.dart';
 import 'package:dialect_sdk/src/wallet-adapter/dialect-wallet-adapter-wrapper.dart';
-import 'package:dialect_sdk/src/web3/api/classes/dialect-account/dialect-account.dart';
-import 'package:dialect_sdk/src/web3/api/classes/member/member.dart';
-import 'package:dialect_sdk/src/web3/api/index.dart';
-import 'package:dialect_sdk/src/web3/api/text-serde/text-serde.dart';
-import 'package:dialect_sdk/src/web3/utils/encryption/ecdh-encryption.dart';
+import 'package:dialect_sdk/src/wallet-adapter/dialect-wallet-adapter.interface.dart';
+import 'package:dialect_sdk/src/wallet-adapter/node-dialect-wallet-adapter.dart';
+import 'package:dialect_web3/dialect_web3.dart';
 import 'package:solana/dto.dart';
 import 'package:solana/solana.dart';
 
@@ -90,6 +88,26 @@ Future<SolanaThread> toSolanaThread(
   );
 }
 
+class KeypairWalletWrapper extends KeypairWallet {
+  KeypairWalletWrapper.fromKeypair(Ed25519HDKeyPair? keyPair)
+      : super.fromKeypair(keyPair);
+
+  static KeypairWallet fromWalletAdapter(DialectWalletAdapter adapter) {
+    if (adapter is DialectWalletAdapterWrapper) {
+      return fromWalletAdapterWrapper(adapter);
+    } else if (adapter is NodeDialectWalletAdapter) {
+      return KeypairWallet.fromKeypair(adapter.keypair);
+    } else {
+      return KeypairWallet.fromWallet(adapter.publicKey);
+    }
+  }
+
+  static KeypairWallet fromWalletAdapterWrapper(
+      DialectWalletAdapterWrapper wrapper) {
+    return fromWalletAdapter(wrapper.delegate);
+  }
+}
+
 class SolanaMessaging implements msg.Messaging {
   final DialectWalletAdapterWrapper walletAdapter;
   final ProgramAccount program;
@@ -115,7 +133,7 @@ class SolanaMessaging implements msg.Messaging {
       return await withErrorParsing(createDialect(
           client: client,
           program: program,
-          owner: KeypairWallet.fromWalletAdapterWrapper(walletAdapter),
+          owner: KeypairWalletWrapper.fromWalletAdapterWrapper(walletAdapter),
           members: [
             Member(
                 publicKey: walletAdapter.delegate.publicKey,
@@ -178,8 +196,9 @@ class SolanaMessaging implements msg.Messaging {
       msg.FindThreadByOtherMemberQuery query,
       EncryptionProps? encryptionProps) async {
     final otherMember = requireSingleMember(query.otherMembers);
-    return withErrorParsing(getDialectForMembers(client, program,
-        [walletAdapter.publicKey, otherMember], encryptionProps));
+    return withErrorParsing(getDialectForMembers(
+        client, program, [walletAdapter.publicKey, otherMember],
+        encryptionProps: encryptionProps));
   }
 
   Future<EncryptionProps?> _getEncryptionProps(
@@ -239,7 +258,7 @@ class SolanaThread extends msg.Thread {
   @override
   Future delete() async {
     await deleteDialect(client, program, dialectAccount,
-        KeypairWallet.fromWalletAdapterWrapper(walletAdapter));
+        KeypairWalletWrapper.fromWalletAdapterWrapper(walletAdapter));
   }
 
   @override
@@ -270,8 +289,8 @@ class SolanaThread extends msg.Thread {
         client,
         program,
         dialectAccount,
-        KeypairWallet.fromWalletAdapterWrapper(walletAdapter),
+        KeypairWalletWrapper.fromWalletAdapterWrapper(walletAdapter),
         command.text,
-        encryptionProps);
+        encryptionProps: encryptionProps);
   }
 }

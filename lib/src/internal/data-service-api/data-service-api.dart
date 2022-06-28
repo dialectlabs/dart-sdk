@@ -4,7 +4,6 @@ import 'package:dialect_sdk/src/auth/auth.interface.dart';
 import 'package:dialect_sdk/src/internal/data-service-api/dtos/dapp-client-dtos.dart';
 import 'package:dialect_sdk/src/internal/data-service-api/dtos/data-service-dtos.dart';
 import 'package:dialect_sdk/src/internal/data-service-api/token-provider.dart';
-import 'package:dialect_sdk/src/sdk/errors.dart';
 import 'package:dio/dio.dart';
 import 'package:nanoid/nanoid.dart';
 
@@ -25,13 +24,18 @@ Future<T> withReThrowingDataServiceError<T>(Future<T> fn) async {
       if (e.response == null) {
         throw NetworkError();
       }
-      final data = RawDataServiceApiError.fromDynamic(e.response!.data);
+
+      String message = "";
+      final data = e.response!.data;
+      if (data is Map<String, dynamic> && data.containsKey("message")) {
+        message = e.response!.data["message"];
+      }
       final requestId = (e.requestOptions.headers[XRequestIdHeader] is String)
           ? e.requestOptions.headers[XRequestIdHeader] as String
           : null;
 
       throw DataServiceApiError(
-          data.message, e.response!.statusMessage, e.response!.statusCode,
+          message, e.response!.statusMessage, e.response!.statusCode,
           requestId: requestId);
     }
     rethrow;
@@ -74,7 +78,8 @@ class DataServiceDappsApiClient implements DataServiceDappsApi {
   final String baseUrl;
   final TokenProvider tokenProvider;
 
-  final String v0 = "v0";
+  final String prefix = "api";
+  final String v = "v1";
   final String dapps = "dapps";
   final String dappAddresses = "dappAddresses";
 
@@ -83,7 +88,7 @@ class DataServiceDappsApiClient implements DataServiceDappsApi {
   Future<DappDto> create(CreateDappCommandDto command) async {
     final token = await tokenProvider.get();
     return withReThrowingDataServiceError(Dio()
-        .post("$baseUrl/$v0/$dapps",
+        .post("$baseUrl/$prefix/$v/$dapps",
             options: Options(headers: createHeaders(token)))
         .then((value) {
       final Map<String, dynamic> json = value.data;
@@ -95,7 +100,7 @@ class DataServiceDappsApiClient implements DataServiceDappsApi {
   Future<List<DappAddressDto>> findAllDappAddresses() async {
     final token = await tokenProvider.get();
     return withReThrowingDataServiceError(Dio()
-        .post("$baseUrl/$v0/$dapps/${token.body.sub}/$dappAddresses",
+        .post("$baseUrl/$prefix/$v/$dapps/${token.body.sub}/$dappAddresses",
             options: Options(headers: createHeaders(token)))
         .then((value) {
       final List<dynamic> json = value.data;
@@ -117,7 +122,8 @@ class DataServiceDialectsApiClient implements DataServiceDialectsApi {
   final String baseUrl;
   final TokenProvider tokenProvider;
 
-  final String v = "v0";
+  final String prefix = "api";
+  final String v = "v1";
   final String dialects = "dialects";
   final String messages = "messages";
 
@@ -128,7 +134,7 @@ class DataServiceDialectsApiClient implements DataServiceDialectsApi {
   Future<DialectAccountDto> create(CreateDialectCommand command) async {
     final token = await tokenProvider.get();
     return withReThrowingDataServiceError(Dio()
-        .post("$baseUrl/$v/$dialects",
+        .post("$baseUrl/$prefix/$v/$dialects",
             options: Options(headers: createHeaders(token)),
             data: command.toJson())
         .then((value) {
@@ -141,7 +147,7 @@ class DataServiceDialectsApiClient implements DataServiceDialectsApi {
   Future delete(String publicKey) async {
     final token = await tokenProvider.get();
     return withReThrowingDataServiceError(Dio()
-        .delete("$baseUrl/$v/$dialects/$publicKey",
+        .delete("$baseUrl/$prefix/$v/$dialects/$publicKey",
             options: Options(headers: createHeaders(token)))
         .then((value) {
       return value.data;
@@ -152,7 +158,7 @@ class DataServiceDialectsApiClient implements DataServiceDialectsApi {
   Future<DialectAccountDto> find(String publicKey) async {
     final token = await tokenProvider.get();
     return withReThrowingDataServiceError(Dio()
-        .get("$baseUrl/$v/$dialects/$publicKey",
+        .get("$baseUrl/$prefix/$v/$dialects/$publicKey",
             options: Options(headers: createHeaders(token)))
         .then((value) {
       final Map<String, dynamic> json = value.data;
@@ -164,7 +170,7 @@ class DataServiceDialectsApiClient implements DataServiceDialectsApi {
   Future<List<DialectAccountDto>> findAll({FindDialectQuery? query}) async {
     final token = await tokenProvider.get();
     return withReThrowingDataServiceError(Dio()
-        .get("$baseUrl/$v/$dialects",
+        .get("$baseUrl/$prefix/$v/$dialects",
             options: Options(headers: createHeaders(token)))
         .then((value) {
       final list = value.data as List<dynamic>;
@@ -177,7 +183,7 @@ class DataServiceDialectsApiClient implements DataServiceDialectsApi {
       String publicKey, SendMessageCommand command) async {
     final token = await tokenProvider.get();
     return withReThrowingDataServiceError(Dio()
-        .post("$baseUrl/$v/$dialects/$publicKey/$messages",
+        .post("$baseUrl/$prefix/$v/$dialects/$publicKey/$messages",
             data: command.toJson(),
             options: Options(headers: createHeaders(token)))
         .then((value) {
@@ -197,14 +203,6 @@ class NetworkError {}
 class RawDataServiceApiError {
   late String message;
   RawDataServiceApiError(this.message);
-
-  RawDataServiceApiError.fromDynamic(dynamic data) {
-    if (data is Map<String, dynamic> && data.keys.contains("message")) {
-      message = data["message"];
-    } else {
-      throw UnknownError();
-    }
-  }
 }
 
 class SendMessageCommand {
