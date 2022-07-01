@@ -13,6 +13,7 @@ CreateThreadCommand _$CreateThreadCommandFromJson(Map<String, dynamic> json) =>
           .map((e) => ThreadMember.fromJson(e as Map<String, dynamic>))
           .toList(),
       encrypted: json['encrypted'] as bool,
+      backend: $enumDecodeNullable(_$BackendEnumMap, json['backend']),
     );
 
 Map<String, dynamic> _$CreateThreadCommandToJson(
@@ -21,7 +22,13 @@ Map<String, dynamic> _$CreateThreadCommandToJson(
       'me': instance.me.toJson(),
       'otherMembers': instance.otherMembers.map((e) => e.toJson()).toList(),
       'encrypted': instance.encrypted,
+      'backend': _$BackendEnumMap[instance.backend],
     };
+
+const _$BackendEnumMap = {
+  Backend.solana: 'SOLANA',
+  Backend.dialectCloud: 'DIALECT_CLOUD',
+};
 
 SendMessageCommand _$SendMessageCommandFromJson(Map<String, dynamic> json) =>
     SendMessageCommand(

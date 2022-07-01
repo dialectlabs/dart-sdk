@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
-import 'package:dialect_sdk/src/core/converters/uint8list-converter.dart';
-import 'package:dialect_sdk/src/internal/auth/token-utils.dart';
+import 'package:dialect_sdk/src/core/converters/uint8list_converter.dart';
+import 'package:dialect_sdk/src/internal/auth/token_utils.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:solana/solana.dart';
 
