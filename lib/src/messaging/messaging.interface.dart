@@ -1,4 +1,4 @@
-import 'package:dialect_sdk/src/core/converters/ed25519-public-key-converter.dart';
+import 'package:dialect_sdk/src/core/converters/ed25519_public_key_converter.dart';
 import 'package:dialect_sdk/src/sdk/sdk.interface.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:solana/solana.dart';

@@ -1,7 +1,7 @@
-import 'package:dialect_sdk/src/internal/data-service-api/token-store.dart';
-import 'package:dialect_sdk/src/internal/encryption/encryption-keys-store.dart';
+import 'package:dialect_sdk/src/auth/token_store.dart';
+import 'package:dialect_sdk/src/encryption/encryption_keys_store.dart';
 import 'package:dialect_sdk/src/messaging/messaging.interface.dart';
-import 'package:dialect_sdk/src/wallet-adapter/dialect-wallet-adapter.interface.dart';
+import 'package:dialect_sdk/src/wallet-adapter/dialect_wallet_adapter.interface.dart';
 import 'package:solana/solana.dart';
 
 class Config {
